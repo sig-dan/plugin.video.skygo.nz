@@ -1,4 +1,3 @@
-import uuid
 import hashlib
 
 from matthuisman import userdata
@@ -7,6 +6,9 @@ from matthuisman.log import log
 from matthuisman.cache import cached
 
 from .constants import HEADERS, AUTH_URL, CHANNELS_URL, TOKEN_URL, CHANNEL_EXPIRY
+
+class Error(Exception):
+    pass
 
 class API(object):
     def new_session(self):
@@ -21,8 +23,6 @@ class API(object):
 
     @cached(expires=CHANNEL_EXPIRY, key='channels')
     def channels(self):
-        print("HEY!")
-
         channels = {}
 
         data = self._session.get(CHANNELS_URL).json()
@@ -47,20 +47,12 @@ class API(object):
         
         data = self._session.get(TOKEN_URL, params=params).json()
         if not 'token' in data:
-            raise Exception(data.get('message', ''))
+            raise Error(data.get('message', ''))
 
         token = data['token']
         url = '{}&auth={}'.format(url, token)
         resp = self._session.get(url, allow_redirects=False)
-
         return resp.headers.get('location')
-        # if not url:
-        #     raise Exception('Unable to get the stream for this channel.\nPossibly your subscription does not include this channel.')
-
-        # if 'faxs' in url:
-        #     raise Exception('This stream is protected by Adobe Access and can not be played in KODI.')
-
-        return url
         
     def login(self, username, password):
         log('API: Login')
@@ -80,7 +72,7 @@ class API(object):
         
         if not access_token:
             self.logout()
-            raise Exception(data.get('message', ''))
+            raise Error(data.get('message', ''))
 
         userdata.set('device_id', device_id)
         userdata.set('access_token', access_token)
