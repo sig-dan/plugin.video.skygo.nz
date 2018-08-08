@@ -1,77 +1,93 @@
+import uuid
+import hashlib
+
 from matthuisman import userdata
 from matthuisman.session import Session
 from matthuisman.log import log
+from matthuisman.cache import cached
 
-from .constants import HEADERS, API_URL
+from .constants import HEADERS, AUTH_URL, CHANNELS_URL, TOKEN_URL, CHANNEL_EXPIRY
 
 class API(object):
     def new_session(self):
         self.logged_in = False
-        self._session = Session(HEADERS, base_url=API_URL)
+        self._session = Session(HEADERS)
         self.set_access_token(userdata.get('access_token'))
 
     def set_access_token(self, token):
         if token:
-            self._session.headers.update({'Authorization': 'Bearer {0}'.format(token)})
+            self._session.headers.update({'sky-x-access-token': token})
             self.logged_in = True
 
-    def my_courses(self):
-        log('API: My Courses')
+    @cached(expires=CHANNEL_EXPIRY, key='channels')
+    def channels(self):
+        print("HEY!")
 
+        channels = {}
+
+        data = self._session.get(CHANNELS_URL).json()
+        for row in data['entries']:
+            data = {'title': row['title'], 'description': row['description'], 'url': '', 'image': row['media$thumbnails'][0]['plfile$url']}
+            for item in row['media$content']:
+                if 'SkyGoStream' in item['plfile$assetTypes']:
+                    data['url'] = item['plfile$url']
+                    break
+
+            channels[row['title']] = data
+
+        return channels
+
+    def play_url(self, url):
         params = {
-            'page_size'       : 9999,
-            'ordering'        : '-access_time,-enrolled',
-            'fields[course]'  : 'id,title,image_480x270,image_750x422,headline,num_published_lectures,content_info,completion_ratio',
+            'profileId':   userdata.get('device_id'),
+            'deviceId':    userdata.get('device_id'),
+            'partnerId':   'skygo',
+            'description': 'ANDROID',
         }
+        
+        data = self._session.get(TOKEN_URL, params=params).json()
+        if not 'token' in data:
+            raise Exception(data.get('message', ''))
 
-        return self._session.get('users/me/subscribed-courses', params=params).json()['results']
+        token = data['token']
+        url = '{}&auth={}'.format(url, token)
+        resp = self._session.get(url, allow_redirects=False)
 
-    def course_items(self, course_id):
-        log('API: Course Items')
+        return resp.headers.get('location')
+        # if not url:
+        #     raise Exception('Unable to get the stream for this channel.\nPossibly your subscription does not include this channel.')
 
-        params = {
-            'page_size'        : 9999,
-            'fields[course]'   : 'title,image_480x270',
-            'fields[chapter]'  : 'description,object_index,title,course',
-            'fields[lecture]'  : 'title,object_index,description,is_published,created,progress_status,last_watched_second,course,asset',
-            'fields[asset]'    : 'asset_type,length,status',
-            'fields[practice]' : 'id',
-            'fields[quiz]'     : 'id',
-        }
+        # if 'faxs' in url:
+        #     raise Exception('This stream is protected by Adobe Access and can not be played in KODI.')
 
-        return self._session.get('courses/{}/cached-subscriber-curriculum-items'.format(course_id), params=params).json()['results']
-
-    def get_stream_urls(self, asset_id):
-        params = {
-            'fields[asset]'   : '@min,status,stream_urls,length,course',
-        }
-
-        return self._session.get('assets/{0}'.format(asset_id), params=params).json().get('stream_urls', {})
-
+        return url
+        
     def login(self, username, password):
         log('API: Login')
 
+        device_id = hashlib.md5(username).hexdigest()
+
         data = {
-            "email": username,
-            "password": password
+            "deviceDetails": "test",
+            "deviceID": device_id,
+            "deviceIP": "192.168.1.1",
+            "password": password,
+            "username": username
         }
 
-        params = {
-            'fields[user]': 'title,image_100x100,name,access_token',
-        }
-
-        data = self._session.post('auth/udemy-auth/login/', params=params, data=data).json()
-        access_token = data.get('access_token')
+        data = self._session.post(AUTH_URL, json=data).json()
+        access_token = data.get('sessiontoken')
         
         if not access_token:
             self.logout()
-            error = data.get('detail', '')
-            raise Exception(error)
+            raise Exception(data.get('message', ''))
 
+        userdata.set('device_id', device_id)
         userdata.set('access_token', access_token)
         self.set_access_token(access_token)
 
     def logout(self):
         log('API: Logout')
+        userdata.delete('device_id')
         userdata.delete('access_token')
         self.new_session()
