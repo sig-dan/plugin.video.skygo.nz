@@ -5,9 +5,11 @@ HEADERS = {
     'X-Sky-API-Key': '375663d6df9ad11809c7bb9dd3e634f8',
 }
 
+DEVICE_IP    = '192.168.1.1'
+
 CHANNELS_URL = 'https://feed.theplatform.com/f/7tMqSC/PDBWHrmbpxqw'
 AUTH_URL     = 'https://4azub3wqb8.execute-api.ap-southeast-2.amazonaws.com/prod/auth/skygo/token/v1/authenticate/'
 TOKEN_URL    = 'https://6cwj6qmdoa.execute-api.ap-southeast-2.amazonaws.com/prod/v1/token/mpx/'
-RENEW_URL    = 'https://4azub3wqb8.execute-api.ap-southeast-2.amazonaws.com/sit/auth/skygo/token/v1/renew'
+RENEW_URL    = 'https://4azub3wqb8.execute-api.ap-southeast-2.amazonaws.com/prod/auth/skygo/token/v1/renew'
 
 CHANNEL_EXPIRY = (60*60*24) #24 hours

@@ -1,11 +1,12 @@
 import hashlib
+import time
 
 from matthuisman import userdata
 from matthuisman.session import Session
 from matthuisman.log import log
 from matthuisman.cache import cached
 
-from .constants import HEADERS, AUTH_URL, RENEW_URL, CHANNELS_URL, TOKEN_URL, CHANNEL_EXPIRY
+from .constants import HEADERS, AUTH_URL, RENEW_URL, CHANNELS_URL, TOKEN_URL, CHANNEL_EXPIRY, DEVICE_IP
 
 class Error(Exception):
     pass
@@ -45,20 +46,22 @@ class API(object):
         data = {
             "deviceDetails": "test",
             "deviceID": device_id,
-            "deviceIP": "192.168.1.1",
+            "deviceIP": DEVICE_IP,
             "password": password,
             "username": username
         }
 
         data = self._session.post(AUTH_URL, json=data).json()
-        access_token = data.get('sessiontoken')
-        
+        access_token = data.get('sessiontoken')      
         if not access_token:
             self.logout()
             raise Error(data.get('message', ''))
 
+        expires = int(data.get('tokenExpires'))
+
         userdata.set('device_id', device_id)
         userdata.set('access_token', access_token)
+        userdata.set('access_token_expires', expires)
         self.set_access_token(access_token)
 
     def _renew_token(self):
@@ -66,17 +69,18 @@ class API(object):
 
         data = {
             "deviceID": userdata.get('device_id'),
-            "deviceIP": "192.168.1.1",
+            "deviceIP": DEVICE_IP,
             "sessionToken": userdata.get('access_token'),
         }
 
         data = self._session.post(RENEW_URL, json=data).json()
         access_token = data.get('sessiontoken')
-        
         if not access_token:
             raise Error(data.get('message', ''))
 
+        expires = int(data.get('tokenExpires'))
         userdata.set('access_token', access_token)
+        userdata.set('access_token_expires', expires)
         self.set_access_token(access_token)
 
     def play_url(self, url):
@@ -86,13 +90,11 @@ class API(object):
             'partnerId':   'skygo',
             'description': 'ANDROID',
         }
-        
-        resp = self._session.get(TOKEN_URL, params=params)
-        if resp.status_code == 403:
-            self._renew_token()
-            resp = self._session.get(TOKEN_URL, params=params)
 
-        data = resp.json()
+        if int(userdata.get('access_token_expires', 0)) < time.time():
+            self._renew_token()
+        
+        data = self._session.get(TOKEN_URL, params=params).json()
         if not 'token' in data:
             raise Error(data.get('message', ''))
 
