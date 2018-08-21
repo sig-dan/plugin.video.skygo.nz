@@ -8,5 +8,6 @@ HEADERS = {
 CHANNELS_URL = 'https://feed.theplatform.com/f/7tMqSC/PDBWHrmbpxqw'
 AUTH_URL     = 'https://4azub3wqb8.execute-api.ap-southeast-2.amazonaws.com/prod/auth/skygo/token/v1/authenticate/'
 TOKEN_URL    = 'https://6cwj6qmdoa.execute-api.ap-southeast-2.amazonaws.com/prod/v1/token/mpx/'
+RENEW_URL    = 'https://4azub3wqb8.execute-api.ap-southeast-2.amazonaws.com/sit/auth/skygo/token/v1/renew'
 
 CHANNEL_EXPIRY = (60*60*24) #24 hours

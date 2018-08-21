@@ -35,7 +35,7 @@ def home():
     folder = plugin.Folder()
 
     if not api.logged_in:
-        folder.add_item(label=_(L_LOGIN), path=plugin.url_for(login))
+        folder.add_item(label=_(L_LOGIN, bold=True), path=plugin.url_for(login))
 
     hidden = userdata.get('hidden', [])
 
@@ -77,6 +77,7 @@ def login():
 
         try:
             api.login(username=username, password=password)
+            gui.refresh()
         except Exception as e:
             gui.ok(_(L_LOGIN_ERROR, error_msg=e))
 
@@ -88,6 +89,7 @@ def logout():
         return
 
     api.logout()
+    gui.refresh()
 
 @plugin.route()
 def hide_channel(channel):
