@@ -57,11 +57,12 @@ class API(object):
             self.logout()
             raise Error(data.get('message', ''))
 
-        expires = int(data.get('tokenExpires'))
+        self._save_auth(device_id, access_token, data.get('tokenExpires'))
 
+    def _save_auth(self, device_id, access_token, expires):
         userdata.set('device_id', device_id)
         userdata.set('access_token', access_token)
-        userdata.set('access_token_expires', expires)
+        userdata.set('access_token_expires', int(expires) - 60)
         self.set_access_token(access_token)
 
     def _renew_token(self):
@@ -78,10 +79,7 @@ class API(object):
         if not access_token:
             raise Error(data.get('message', ''))
 
-        expires = int(data.get('tokenExpires'))
-        userdata.set('access_token', access_token)
-        userdata.set('access_token_expires', expires)
-        self.set_access_token(access_token)
+        self._save_auth(userdata.get('device_id'), access_token, data.get('tokenExpires'))
 
     def play_url(self, url):
         params = {
@@ -107,4 +105,5 @@ class API(object):
         log('API: Logout')
         userdata.delete('device_id')
         userdata.delete('access_token')
+        userdata.delete('access_token_expires')
         self.new_session()
