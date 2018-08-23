@@ -5,22 +5,29 @@ from matthuisman import userdata
 from matthuisman.session import Session
 from matthuisman.log import log
 from matthuisman.cache import cached
+from matthuisman.util import get_string as _
 
 from .constants import HEADERS, AUTH_URL, RENEW_URL, CHANNELS_URL, TOKEN_URL, CHANNEL_EXPIRY, DEVICE_IP
+
+L_TOKEN_ERROR = 30011
 
 class Error(Exception):
     pass
 
 class API(object):
     def new_session(self):
-        self.logged_in = False
+        self._logged_in = False
         self._session = Session(HEADERS)
-        self.set_access_token(userdata.get('access_token'))
+        self._set_access_token(userdata.get('access_token'))
 
-    def set_access_token(self, token):
+    def _set_access_token(self, token):
         if token:
             self._session.headers.update({'sky-x-access-token': token})
-            self.logged_in = True
+            self._logged_in = True
+
+    @property
+    def logged_in(self):
+        return self._logged_in
 
     @cached(expires=CHANNEL_EXPIRY, key='channels')
     def channels(self):
@@ -57,13 +64,7 @@ class API(object):
             self.logout()
             raise Error(data.get('message', ''))
 
-        self._save_auth(device_id, access_token, data.get('tokenExpires'))
-
-    def _save_auth(self, device_id, access_token, expires):
-        userdata.set('device_id', device_id)
-        userdata.set('access_token', access_token)
-        userdata.set('access_token_expires', int(expires) - 60)
-        self.set_access_token(access_token)
+        self._save_auth(device_id, access_token)
 
     def _renew_token(self):
         log('API: Renew Token')
@@ -79,7 +80,12 @@ class API(object):
         if not access_token:
             raise Error(data.get('message', ''))
 
-        self._save_auth(userdata.get('device_id'), access_token, data.get('tokenExpires'))
+        self._save_auth(userdata.get('device_id'), access_token)
+
+    def _save_auth(self, device_id, access_token):
+        userdata.set('device_id', device_id)
+        userdata.set('access_token', access_token)
+        self.new_session()
 
     def play_url(self, url):
         params = {
@@ -88,13 +94,15 @@ class API(object):
             'partnerId':   'skygo',
             'description': 'ANDROID',
         }
-
-        if int(userdata.get('access_token_expires', 0)) < time.time():
-            self._renew_token()
         
-        data = self._session.get(TOKEN_URL, params=params).json()
-        if not 'token' in data:
-            raise Error(data.get('message', ''))
+        resp = self._session.get(TOKEN_URL, params=params)
+        if resp.status_code == 403:
+            self._renew_token()
+            resp = self._session.get(TOKEN_URL, params=params)
+
+        data = resp.json()
+        if 'token' not in data:
+            raise Error(_(L_TOKEN_ERROR))
 
         token = data['token']
         url = '{}&auth={}'.format(url, token)
@@ -105,5 +113,4 @@ class API(object):
         log('API: Logout')
         userdata.delete('device_id')
         userdata.delete('access_token')
-        userdata.delete('access_token_expires')
         self.new_session()

@@ -156,3 +156,8 @@ msgctxt "#30010"
 msgid "This stream is protected by Adobe Access DRM and can not be played in KODI.\n"
 "Would you like to hide it?"
 msgstr ""
+
+msgctxt "#30011"
+msgid "Error getting play token.\n"
+"Try logout and login again."
+msgstr ""

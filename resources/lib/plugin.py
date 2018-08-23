@@ -122,7 +122,7 @@ def play(channel):
             hide_channel(channel['title'])
             
     else:
-        return plugin.PlayerItem(
+        return plugin.Item(
             label = channel['title'],
             art   = {'thumb': channel['image']},
             info  = {'description': channel['description']},
