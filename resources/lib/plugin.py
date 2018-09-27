@@ -18,6 +18,7 @@ L_NO_CHANNEL       = 30008
 L_NO_STREAM        = 30009
 L_ADOBE_ERROR      = 30010
 L_LIVE_TV          = 30012
+L_RESET_HIDDEN_OK  = 30014
 
 def sorted_nicely(l):
     convert = lambda text: int(text) if text.isdigit() else text
@@ -72,7 +73,7 @@ def live_tv():
 @plugin.route()
 def reset_hidden():
     userdata.delete('hidden')
-    gui.notification('Reset Hidden OK')
+    gui.notification(_(L_RESET_HIDDEN_OK))
 
 @plugin.route()
 def login():

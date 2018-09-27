@@ -185,3 +185,7 @@ msgstr ""
 msgctxt "#30013"
 msgid "Reset Hidden Channels"
 msgstr ""
+
+msgctxt "#30014"
+msgid "Hidden Channels Reset"
+msgstr ""
