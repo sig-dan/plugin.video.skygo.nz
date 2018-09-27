@@ -7,7 +7,7 @@ from matthuisman.log import log
 from matthuisman.cache import cached
 from matthuisman.util import get_string as _
 
-from .constants import HEADERS, AUTH_URL, RENEW_URL, CHANNELS_URL, TOKEN_URL, CHANNEL_EXPIRY, DEVICE_IP
+from .constants import HEADERS, AUTH_URL, RENEW_URL, CHANNELS_URL, TOKEN_URL, CHANNEL_EXPIRY, DEVICE_IP, CHANNELS_CACHE_KEY
 
 L_TOKEN_ERROR = 30011
 
@@ -29,7 +29,7 @@ class API(object):
     def logged_in(self):
         return self._logged_in
 
-    @cached(expires=CHANNEL_EXPIRY, key='channels')
+    @cached(expires=CHANNEL_EXPIRY, key=CHANNELS_CACHE_KEY)
     def channels(self):
         channels = {}
 

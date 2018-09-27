@@ -4,6 +4,7 @@ from matthuisman import plugin, gui, cache, settings, userdata
 from matthuisman.util import get_string as _
 
 from .api import API
+from .constants import CHANNELS_CACHE_KEY
 
 L_LOGIN            = 30000
 L_HIDE_CHANNEL     = 30001
@@ -16,6 +17,7 @@ L_LOGOUT_YES_NO    = 30007
 L_NO_CHANNEL       = 30008
 L_NO_STREAM        = 30009
 L_ADOBE_ERROR      = 30010
+L_LIVE_TV          = 30012
 
 def sorted_nicely(l):
     convert = lambda text: int(text) if text.isdigit() else text
@@ -28,7 +30,6 @@ api = API()
 def before_dispatch():
     api.new_session()
     plugin.logged_in = api.logged_in
-    cache.enabled    = settings.getBool('use_cache', True)
 
 @plugin.route('')
 def home():
@@ -36,6 +37,17 @@ def home():
 
     if not api.logged_in:
         folder.add_item(label=_(L_LOGIN, bold=True), path=plugin.url_for(login))
+    else:
+        folder.add_item(label=_(L_LIVE_TV, bold=True), path=plugin.url_for(live_tv), cache_key=CHANNELS_CACHE_KEY)
+        folder.add_item(label=_(L_LOGOUT), path=plugin.url_for(logout))
+
+    folder.add_item(label=_(L_SETTINGS), path=plugin.url_for(plugin.ROUTE_SETTINGS))
+
+    return folder
+
+@plugin.route()
+def live_tv():
+    folder = plugin.Folder(title=_(L_LIVE_TV))
 
     hidden = userdata.get('hidden', [])
 
@@ -44,21 +56,23 @@ def home():
         if channel['title'] in hidden:
             continue
 
+        _hide_channel = plugin.url_for(hide_channel, channel=channel['title'])
+
         folder.add_item(
             label = channel['title'],
             art   = {'thumb': channel['image']},
             path  = plugin.url_for(play, is_live=True, channel=channel['title']),
             info  = {'description': channel['description']},
             playable = True,
-            context = ((_(L_HIDE_CHANNEL), 'XBMC.RunPlugin({})'.format(plugin.url_for(hide_channel, channel=channel['title']))),),
+            context = ((_(L_HIDE_CHANNEL), 'XBMC.RunPlugin({})'.format(_hide_channel)),)
         )
 
-    if api.logged_in:
-        folder.add_item(label=_(L_LOGOUT), path=plugin.url_for(logout))
-
-    folder.add_item(label=_(L_SETTINGS), path=plugin.url_for(plugin.ROUTE_SETTINGS))
-
     return folder
+
+@plugin.route()
+def reset_hidden():
+    userdata.delete('hidden')
+    gui.notification('Reset Hidden OK')
 
 @plugin.route()
 def login():

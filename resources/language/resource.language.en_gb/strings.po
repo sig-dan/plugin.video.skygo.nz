@@ -105,6 +105,22 @@ msgctxt "#32019"
 msgid "Clear Data"
 msgstr ""
 
+msgctxt "#32020"
+msgid "Error"
+msgstr ""
+
+msgctxt "#32021"
+msgid "Install Widevine DRM"
+msgstr ""
+
+msgctxt "#32022"
+msgid "Widevine DRM Installed OK\n"
+"If videos do not play, please restart KODI and try again"
+msgstr ""
+
+msgctxt "#32023"
+msgid "Use Inputstream HLS"
+msgstr ""
 
 
 ### [PLUGIN] ###
@@ -160,4 +176,12 @@ msgstr ""
 msgctxt "#30011"
 msgid "Error getting play token.\n"
 "Try logout and login again."
+msgstr ""
+
+msgctxt "#30012"
+msgid "Live TV"
+msgstr ""
+
+msgctxt "#30013"
+msgid "Reset Hidden Channels"
 msgstr ""
