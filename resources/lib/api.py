@@ -5,11 +5,9 @@ from matthuisman import userdata
 from matthuisman.session import Session
 from matthuisman.log import log
 from matthuisman.cache import cached
-from matthuisman.util import get_string as _
 
 from .constants import HEADERS, AUTH_URL, RENEW_URL, CHANNELS_URL, TOKEN_URL, CHANNEL_EXPIRY, DEVICE_IP, CHANNELS_CACHE_KEY
-
-L_TOKEN_ERROR = 30011
+from .language import _
 
 class Error(Exception):
     pass
@@ -102,7 +100,7 @@ class API(object):
 
         data = resp.json()
         if 'token' not in data:
-            raise Error(_(L_TOKEN_ERROR))
+            raise Error(_.TOKEN_ERROR)
 
         token = data['token']
         url = '{}&auth={}'.format(url, token)
