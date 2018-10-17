@@ -1,0 +1,61 @@
+# KODI Media Center language file
+# Addon Name: SKY GO
+# Addon id: plugin.video.skygo.nz
+# Addon Provider: Matt Huisman
+msgid ""
+msgstr ""
+"Project-Id-Version:\n"
+"Report-Msgid-Bugs-To:\n"
+"POT-Creation-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator:\n"
+"Language-Team:\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: en\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgctxt "#30000"
+msgid "Hide Channel"
+msgstr ""
+
+msgctxt "#30001"
+msgid "Sky Go Email"
+msgstr ""
+
+msgctxt "#30002"
+msgid "Sky Go Password"
+msgstr ""
+
+msgctxt "#30003"
+msgid "Unable to find that channel"
+msgstr ""
+
+msgctxt "#30004"
+msgid "Unable to get the stream for this channel.\n"
+"Possibly your subscription does not include this channel.\n"
+"Would you like to hide it?"
+msgstr ""
+
+msgctxt "#30005"
+msgid "This stream is protected by Adobe Access DRM and can not be played in KODI.\n"
+"Would you like to hide it?"
+msgstr ""
+
+msgctxt "#30006"
+msgid "Error getting play token.\n"
+"Try logout and login again."
+msgstr ""
+
+msgctxt "#30007"
+msgid "Live TV"
+msgstr ""
+
+msgctxt "#30008"
+msgid "Reset Hidden Channels"
+msgstr ""
+
+msgctxt "#30009"
+msgid "Hidden Channels Reset"
+msgstr ""
