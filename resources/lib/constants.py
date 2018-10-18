@@ -10,6 +10,12 @@ CHANNELS_URL = 'https://feed.theplatform.com/f/7tMqSC/PDBWHrmbpxqw'
 AUTH_URL     = 'https://4azub3wqb8.execute-api.ap-southeast-2.amazonaws.com/prod/auth/skygo/token/v1/authenticate/'
 TOKEN_URL    = 'https://6cwj6qmdoa.execute-api.ap-southeast-2.amazonaws.com/prod/v1/token/mpx/'
 RENEW_URL    = 'https://4azub3wqb8.execute-api.ap-southeast-2.amazonaws.com/prod/auth/skygo/token/v1/renew'
+CONTENT_URL  = 'https://d3207bvak4txrg.cloudfront.net/v1/content'
+IMAGE_URL    = 'https://prod-images.skygo.co.nz/{}'
+PLAY_URL     = 'https://feed.theplatform.com/f/7tMqSC/T2XJ65T_soBz'
+WIDEVINE_URL = 'https://widevine.entitlement.theplatform.com/wv/web/ModularDrm/getWidevineLicense?schema=1.0&token={token}&form=json&account=http://access.auth.theplatform.com/data/Account/2682481291&_releasePid={pid}&_widevineChallenge={challenge}'
 
 CHANNEL_EXPIRY = (60*60*24) #24 hours
 CHANNELS_CACHE_KEY = 'channels'
+CONTENT_EXPIRY = (60*60*24) #24 hours
+CONTENT_CACHE_KEY = 'content'

@@ -1,12 +1,13 @@
 import hashlib
 import time
+import re
 
-from matthuisman import userdata
+from matthuisman import userdata, inputstream, plugin
 from matthuisman.session import Session
 from matthuisman.log import log
 from matthuisman.cache import cached
 
-from .constants import HEADERS, AUTH_URL, RENEW_URL, CHANNELS_URL, TOKEN_URL, CHANNEL_EXPIRY, DEVICE_IP, CHANNELS_CACHE_KEY
+from .constants import HEADERS, AUTH_URL, RENEW_URL, CHANNELS_URL, TOKEN_URL, CHANNEL_EXPIRY, DEVICE_IP, CHANNELS_CACHE_KEY, CONTENT_EXPIRY, CONTENT_CACHE_KEY, CONTENT_URL, PLAY_URL, WIDEVINE_URL
 from .language import _
 
 class Error(Exception):
@@ -26,6 +27,11 @@ class API(object):
     @property
     def logged_in(self):
         return self._logged_in
+
+    @cached(expires=CONTENT_EXPIRY, key=CONTENT_CACHE_KEY)
+    def content(self):
+        data = self._session.get(CONTENT_URL).json()
+        return [x for x in data['data']]
 
     @cached(expires=CHANNEL_EXPIRY, key=CHANNELS_CACHE_KEY)
     def channels(self):
@@ -85,14 +91,14 @@ class API(object):
         userdata.set('access_token', access_token)
         self.new_session()
 
-    def play_url(self, url):
+    def _get_play_token(self):
         params = {
             'profileId':   userdata.get('device_id'),
             'deviceId':    userdata.get('device_id'),
             'partnerId':   'skygo',
             'description': 'ANDROID',
         }
-        
+
         resp = self._session.get(TOKEN_URL, params=params)
         if resp.status_code == 403:
             self._renew_token()
@@ -102,7 +108,43 @@ class API(object):
         if 'token' not in data:
             raise Error(_.TOKEN_ERROR)
 
-        token = data['token']
+        return data['token']
+
+    def play_media(self, media_id):
+        token = self._get_play_token()
+
+        params = {
+            'form': 'json',
+            'types': None,
+            'fields': 'id,content',
+            'byId': media_id,
+        }
+
+        data = self._session.get(PLAY_URL, params=params).json()
+
+        url = data['entries'][0]['media$content'][0]['plfile$url']
+        url = '{}&auth={}&formats=mpeg-dash&format=SMIL&tracking=true'.format(url, token)
+
+        page = self._session.get(url).text
+        if 'LicenseNotGranted' in page:
+            raise Exception(_.NO_ACCESS)
+
+        url = re.search('video src="(.*?)"', page).group(1)
+        pid = re.search('pid=(.*?)\|', page).group(1)
+
+        return plugin.Item(
+            path = url,
+            art  = False,
+            inputstream = inputstream.Widevine(
+                license_key  = WIDEVINE_URL.format(token=token, pid=pid, challenge='B{SSM}'),
+                challenge    = '',
+                content_type = '',
+                response     = 'JBlicense',
+            ),
+        )
+
+    def play_url(self, url):
+        token = self._get_play_token()
         url = '{}&auth={}'.format(url, token)
         resp = self._session.get(url, allow_redirects=False)
         return resp.headers.get('location')

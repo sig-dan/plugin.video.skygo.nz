@@ -11,5 +11,10 @@ class Language(BaseLanguage):
     LIVE_TV          = 30007
     RESET_HIDDEN     = 30008
     RESET_HIDDEN_OK  = 30009
+    TV_SHOWS         = 30010
+    MOVIES           = 30011
+    SPORTS           = 30012
+    BOX_SETS         = 30013
+    NO_ACCESS        = 30014
 
 _ = Language()

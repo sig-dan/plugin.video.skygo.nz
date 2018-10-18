@@ -59,3 +59,23 @@ msgstr ""
 msgctxt "#30009"
 msgid "Hidden Channels Reset"
 msgstr ""
+
+msgctxt "#30010"
+msgid "TV Shows"
+msgstr ""
+
+msgctxt "#30011"
+msgid "Movies"
+msgstr ""
+
+msgctxt "#30012"
+msgid "Sports"
+msgstr ""
+
+msgctxt "#30013"
+msgid "Box Sets"
+msgstr ""
+
+msgctxt "#30014"
+msgid "Your subscription does not include access to this content"
+msgstr ""
