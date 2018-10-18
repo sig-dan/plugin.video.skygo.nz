@@ -21,8 +21,8 @@ def home():
         folder.add_item(label=_(_.LIVE_TV, _bold=True),  path=plugin.url_for(live_tv), cache_key=CHANNELS_CACHE_KEY)
         folder.add_item(label=_(_.TV_SHOWS, _bold=True), path=plugin.url_for(tv_shows), cache_key=CONTENT_CACHE_KEY)
         folder.add_item(label=_(_.MOVIES, _bold=True),   path=plugin.url_for(movies), cache_key=CONTENT_CACHE_KEY)
-      #  folder.add_item(label=_(_.SPORTS, _bold=True),   path=plugin.url_for(sports), cache_key=CONTENT_CACHE_KEY)
-      #  folder.add_item(label=_(_.BOX_SETS, _bold=True), path=plugin.url_for(box_sets), cache_key=CONTENT_CACHE_KEY)
+        folder.add_item(label=_(_.SPORTS, _bold=True),   path=plugin.url_for(sports), cache_key=CONTENT_CACHE_KEY)
+        folder.add_item(label=_(_.BOX_SETS, _bold=True), path=plugin.url_for(box_sets), cache_key=CONTENT_CACHE_KEY)
 
         folder.add_item(label=_.LOGOUT, path=plugin.url_for(logout))
 
@@ -54,12 +54,29 @@ def live_tv():
 @plugin.route()
 def tv_shows():
     folder = plugin.Folder(title=_.TV_SHOWS)
+    folder.add_items(_shows('tvshows'))
+    return folder
+
+@plugin.route()
+def sports():
+    folder = plugin.Folder(title=_.SPORTS)
+    folder.add_items(_shows('sport'))
+    return folder
+
+@plugin.route()
+def box_sets():
+    folder = plugin.Folder(title=_.BOX_SETS)
+    folder.add_items(_shows('boxsets'))
+    return folder
+
+def _shows(section):
+    items = []
 
     for row in api.content().values():
-        if row['section'] != 'tvshows' or row['suspended']:
+        if row['section'] != section or row['suspended']:
             continue
 
-        folder.add_item(
+        item = plugin.Item(
             label = row['title'],
             info  = {
                 'tvshowtitle': row.get('seriesTitle', row['title']),
@@ -69,33 +86,9 @@ def tv_shows():
             path  = plugin.url_for(show, show_id=row['id']),
         )
 
-    return folder
+        items.append(item)
 
-@plugin.route()
-def show(show_id):
-    show = api.content()[show_id]
-    folder = plugin.Folder(title=show['title'])
-    
-    for row in show.get('subContent', []):
-        if row['suspended']:
-            continue
-
-        folder.add_item(
-            label = _(_.EPISODE_LABEL, title=row['episodeTitle'], episode=row.get('episodeNumber')),
-            info  = {
-                'tvshowtitle': show.get('seriesTitle', show['title']),
-                'plot': row.get('episodeSynopsis'),
-                'duration': int(row.get('duration', '0 mins').strip(' mins')) * 60,
-                'season': int(row.get('seasonNumber', 0)),
-                'episode': int(row.get('episodeNumber', 0)),
-                'mediatype': 'episode',
-            },
-            art   = {'thumb': IMAGE_URL.format(show['images'].get('MP','')), 'fanart': IMAGE_URL.format(show['images'].get('PS',''))},
-            path  = plugin.url_for(play, media_id=row['mediaId']),
-            playable = True,
-        )
-
-    return folder
+    return items
 
 @plugin.route()
 def movies():
@@ -120,22 +113,28 @@ def movies():
     return folder
 
 @plugin.route()
-def sports():
-    folder = plugin.Folder(title=_.SPORTS)
+def show(show_id):
+    show = api.content()[show_id]
+    folder = plugin.Folder(title=show['title'])
     
-    for id, row in api.content().iteritems():
-        if row['section'] != 'sport' or row['suspended']:
+    for row in sorted(show.get('subContent', []), key=lambda x: x.get('episodeNumber', x['episodeTitle'])):
+        if row['suspended']:
             continue
 
-    return folder
-
-@plugin.route()
-def box_sets():
-    folder = plugin.Folder(title=_.SPORTS)
-    
-    for id, row in api.content().iteritems():
-        if row['section'] != 'boxsets' or row['suspended']:
-            continue
+        folder.add_item(
+            label = _(_.EPISODE_LABEL, title=row['episodeTitle'], episode=row.get('episodeNumber')),
+            info  = {
+                'tvshowtitle': show.get('seriesTitle', show['title']),
+                'plot': row.get('episodeSynopsis'),
+                'duration': int(row.get('duration', '0 mins').strip(' mins')) * 60,
+                'season': int(row.get('seasonNumber', 0)),
+                'episode': int(row.get('episodeNumber', 0)),
+                'mediatype': 'episode',
+            },
+            art   = {'thumb': IMAGE_URL.format(show['images'].get('MP','')), 'fanart': IMAGE_URL.format(show['images'].get('PS',''))},
+            path  = plugin.url_for(play, media_id=row['mediaId']),
+            playable = True,
+        )
 
     return folder
 

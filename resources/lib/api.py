@@ -13,7 +13,7 @@ from .language import _
 
 def sorted_nicely(l, key):
     convert = lambda text: int(text) if text.isdigit() else text
-    alphanum_key = lambda x: [convert(c) for c in re.split('([0-9]+)', x[key])]
+    alphanum_key = lambda x: [convert(c) for c in re.split('([0-9]+)', x[key].replace(' ', '').strip().lower())]
     return sorted(l, key = alphanum_key)
 
 class API(object):
@@ -36,7 +36,7 @@ class API(object):
         content = OrderedDict()
 
         rows = self._session.get(CONTENT_URL).json()['data']
-        for row in rows:
+        for row in sorted_nicely(rows, 'title'):
             content[row['id']] = row
 
         return content
