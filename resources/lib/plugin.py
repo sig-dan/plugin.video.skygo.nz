@@ -1,4 +1,5 @@
 import re
+from collections import OrderedDict
 
 from matthuisman import plugin, gui, cache, userdata, signals, inputstream
 
@@ -26,10 +27,10 @@ def home():
         folder.add_item(label=_(_.LOGIN, _bold=True), path=plugin.url_for(login))
     else:
         folder.add_item(label=_(_.LIVE_TV, _bold=True),  path=plugin.url_for(live_tv), cache_key=CHANNELS_CACHE_KEY)
-        # folder.add_item(label=_(_.TV_SHOWS, _bold=True), path=plugin.url_for(tv_shows), cache_key=CONTENT_CACHE_KEY)
+        folder.add_item(label=_(_.TV_SHOWS, _bold=True), path=plugin.url_for(tv_shows), cache_key=CONTENT_CACHE_KEY)
         folder.add_item(label=_(_.MOVIES, _bold=True),   path=plugin.url_for(movies), cache_key=CONTENT_CACHE_KEY)
-        # folder.add_item(label=_(_.SPORTS, _bold=True),   path=plugin.url_for(sports), cache_key=CONTENT_CACHE_KEY)
-        # folder.add_item(label=_(_.BOX_SETS, _bold=True), path=plugin.url_for(box_sets), cache_key=CONTENT_CACHE_KEY)
+      #  folder.add_item(label=_(_.SPORTS, _bold=True),   path=plugin.url_for(sports), cache_key=CONTENT_CACHE_KEY)
+      #  folder.add_item(label=_(_.BOX_SETS, _bold=True), path=plugin.url_for(box_sets), cache_key=CONTENT_CACHE_KEY)
 
         folder.add_item(label=_.LOGOUT, path=plugin.url_for(logout))
 
@@ -94,6 +95,94 @@ def sports():
 def box_sets():
     rows = _filter_content('boxsets')
     print(len(rows))
+
+@plugin.route()
+def tv_shows():
+    folder = plugin.Folder(title=_.TV_SHOWS)
+
+    for id, row in api.content().iteritems():
+        if row['section'] != 'tvshows' or row['suspended']:
+            continue
+
+        folder.add_item(
+            label = row['title'],
+            info  = {
+                'tvshowtitle': row.get('seriesTitle', row['title']),
+                'mediatype': 'tvshow',
+            },
+            art   = {'thumb': IMAGE_URL.format(row['images'].get('MP','')), 'fanart': IMAGE_URL.format(row['images'].get('PS',''))},
+            path  = plugin.url_for(show, id=id),
+        )
+
+    return folder
+
+@plugin.route()
+def show(id):
+    show = api.content()[id]
+    folder = plugin.Folder(title=show['title'])
+    
+    for row in show.get('subContent', []):
+        if row['suspended']:
+            continue
+
+        folder.add_item(
+            label = _(_.EPISODE_LABEL, title=row['episodeTitle'], episode=row.get('episodeNumber')),
+            info  = {
+                'tvshowtitle': show.get('seriesTitle', show['title']),
+                'plot': row.get('episodeSynopsis'),
+                'duration': int(row.get('duration', '0 mins').strip(' mins')) * 60,
+                'season': int(row.get('seasonNumber', 0)),
+                'episode': int(row.get('episodeNumber', 0)),
+                'mediatype': 'episode',
+            },
+            art   = {'thumb': IMAGE_URL.format(show['images'].get('MP','')), 'fanart': IMAGE_URL.format(show['images'].get('PS',''))},
+            path  = plugin.url_for(play, media_id=row['mediaId']),
+            playable = True,
+        )
+
+    return folder
+
+@plugin.route()
+def movies():
+    folder = plugin.Folder(title=_.MOVIES)
+    
+    for id, row in api.content().iteritems():
+        if row['section'] != 'movies' or row['suspended']:
+            continue
+
+        folder.add_item(
+            label = row['title'],
+            info = {
+                'plot': row['synopsis'],
+                'duration': int(row.get('duration', '0 mins').strip(' mins')) * 60,
+                'mediatype': 'movie',
+            },
+            art  = {'thumb': IMAGE_URL.format(row['images'].get('MP','')), 'fanart': IMAGE_URL.format(row['images'].get('PS',''))},
+            path = plugin.url_for(play, media_id=row['mediaId']),
+            playable = True,
+        )
+
+    return folder
+
+@plugin.route()
+def sports():
+    folder = plugin.Folder(title=_.SPORTS)
+    
+    for id, row in api.content().iteritems():
+        if row['section'] != 'sport' or row['suspended']:
+            continue
+
+    return folder
+
+@plugin.route()
+def box_sets():
+    folder = plugin.Folder(title=_.SPORTS)
+    
+    for id, row in api.content().iteritems():
+        if row['section'] != 'boxsets' or row['suspended']:
+            continue
+
+    return folder
 
 @plugin.route()
 def reset_hidden():

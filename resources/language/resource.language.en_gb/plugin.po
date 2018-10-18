@@ -79,3 +79,7 @@ msgstr ""
 msgctxt "#30014"
 msgid "Your subscription does not include access to this content"
 msgstr ""
+
+msgctxt "#30015"
+msgid "{title} - Episode {episode}"
+msgstr ""

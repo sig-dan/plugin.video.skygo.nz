@@ -1,6 +1,7 @@
 import hashlib
 import time
 import re
+from collections import OrderedDict
 
 from matthuisman import userdata, inputstream, plugin
 from matthuisman.session import Session
@@ -30,12 +31,17 @@ class API(object):
 
     @cached(expires=CONTENT_EXPIRY, key=CONTENT_CACHE_KEY)
     def content(self):
-        data = self._session.get(CONTENT_URL).json()
-        return [x for x in data['data']]
+        content = OrderedDict()
+
+        rows = self._session.get(CONTENT_URL).json()['data']
+        for row in rows:
+            content[row['id']] = row
+
+        return content
 
     @cached(expires=CHANNEL_EXPIRY, key=CHANNELS_CACHE_KEY)
     def channels(self):
-        channels = {}
+        channels = OrderedDict()
 
         data = self._session.get(CHANNELS_URL).json()
         for row in data['entries']:

@@ -16,5 +16,6 @@ class Language(BaseLanguage):
     SPORTS           = 30012
     BOX_SETS         = 30013
     NO_ACCESS        = 30014
+    EPISODE_LABEL    = 30015
 
 _ = Language()
