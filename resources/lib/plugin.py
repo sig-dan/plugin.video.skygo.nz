@@ -1,16 +1,8 @@
-import re
-from collections import OrderedDict
-
 from matthuisman import plugin, gui, cache, userdata, signals, inputstream
 
 from .api import API
 from .constants import CHANNELS_CACHE_KEY, CONTENT_CACHE_KEY, IMAGE_URL
 from .language import _
-
-def sorted_nicely(l):
-    convert = lambda text: int(text) if text.isdigit() else text
-    alphanum_key = lambda key: [convert(c) for c in re.split('([0-9]+)', key['title'])]
-    return sorted(l, key = alphanum_key)
 
 api = API()
 
@@ -44,8 +36,7 @@ def live_tv():
 
     hidden = userdata.get('hidden', [])
 
-    channels = sorted_nicely(api.channels().values())
-    for channel in channels:
+    for channel in api.channels().values():
         if channel['title'] in hidden:
             continue
 
@@ -60,47 +51,11 @@ def live_tv():
 
     return folder
 
-def _filter_content(section):
-    return [x for x in api.content() if x['section'] == section]
-
-@plugin.route()
-def tv_shows():
-    rows = _filter_content('tvshows')
-    print(len(rows))
-
-@plugin.route()
-def movies():
-    folder = plugin.Folder(title=_.MOVIES)
-    
-    rows = _filter_content('movies')
-    for row in rows:
-        #if row['suspended'] or row['expiryDate'] > now():
-
-        folder.add_item(
-            label = row['title'],
-            info = {'plot': row['synopsis']},
-            art  = {'thumb': IMAGE_URL.format(row['images'].get('MP','')), 'fanart': IMAGE_URL.format(row['images'].get('PS',''))},
-            path = plugin.url_for(play, media_id=row['mediaId']),
-            playable = True,
-        )
-
-    return folder
-
-@plugin.route()
-def sports():
-    rows = _filter_content('sport')
-    print(len(rows))
-
-@plugin.route()
-def box_sets():
-    rows = _filter_content('boxsets')
-    print(len(rows))
-
 @plugin.route()
 def tv_shows():
     folder = plugin.Folder(title=_.TV_SHOWS)
 
-    for id, row in api.content().iteritems():
+    for row in api.content().values():
         if row['section'] != 'tvshows' or row['suspended']:
             continue
 
@@ -111,14 +66,14 @@ def tv_shows():
                 'mediatype': 'tvshow',
             },
             art   = {'thumb': IMAGE_URL.format(row['images'].get('MP','')), 'fanart': IMAGE_URL.format(row['images'].get('PS',''))},
-            path  = plugin.url_for(show, id=id),
+            path  = plugin.url_for(show, show_id=row['id']),
         )
 
     return folder
 
 @plugin.route()
-def show(id):
-    show = api.content()[id]
+def show(show_id):
+    show = api.content()[show_id]
     folder = plugin.Folder(title=show['title'])
     
     for row in show.get('subContent', []):
@@ -146,7 +101,7 @@ def show(id):
 def movies():
     folder = plugin.Folder(title=_.MOVIES)
     
-    for id, row in api.content().iteritems():
+    for row in api.content().values():
         if row['section'] != 'movies' or row['suspended']:
             continue
 

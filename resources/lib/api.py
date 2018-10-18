@@ -11,8 +11,10 @@ from matthuisman.cache import cached
 from .constants import HEADERS, AUTH_URL, RENEW_URL, CHANNELS_URL, TOKEN_URL, CHANNEL_EXPIRY, DEVICE_IP, CHANNELS_CACHE_KEY, CONTENT_EXPIRY, CONTENT_CACHE_KEY, CONTENT_URL, PLAY_URL, WIDEVINE_URL
 from .language import _
 
-class Error(Exception):
-    pass
+def sorted_nicely(l, key):
+    convert = lambda text: int(text) if text.isdigit() else text
+    alphanum_key = lambda x: [convert(c) for c in re.split('([0-9]+)', x[key])]
+    return sorted(l, key = alphanum_key)
 
 class API(object):
     def new_session(self):
@@ -44,7 +46,7 @@ class API(object):
         channels = OrderedDict()
 
         data = self._session.get(CHANNELS_URL).json()
-        for row in data['entries']:
+        for row in sorted_nicely(data['entries'], 'title'):
             data = {'title': row['title'], 'description': row['description'], 'url': '', 'image': row['media$thumbnails'][0]['plfile$url']}
             for item in row['media$content']:
                 if 'SkyGoStream' in item['plfile$assetTypes']:
