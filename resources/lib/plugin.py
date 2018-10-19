@@ -82,7 +82,7 @@ def _shows(section):
                 'tvshowtitle': row.get('seriesTitle', row['title']),
                 'mediatype': 'tvshow',
             },
-            art   = {'thumb': IMAGE_URL.format(row['images'].get('MP','')), 'fanart': IMAGE_URL.format(row['images'].get('PS',''))},
+            art   = {'thumb': IMAGE_URL.format(row['images'].get('MP',''))},
             path  = plugin.url_for(show, show_id=row['id']),
         )
 
@@ -105,7 +105,7 @@ def movies():
                 'duration': int(row.get('duration', '0 mins').strip(' mins')) * 60,
                 'mediatype': 'movie',
             },
-            art  = {'thumb': IMAGE_URL.format(row['images'].get('MP','')), 'fanart': IMAGE_URL.format(row['images'].get('PS',''))},
+            art  = {'thumb': IMAGE_URL.format(row['images'].get('MP',''))},
             path = plugin.url_for(play, media_id=row['mediaId']),
             playable = True,
         )
@@ -131,7 +131,7 @@ def show(show_id):
                 'episode': int(row.get('episodeNumber', 0)),
                 'mediatype': 'episode',
             },
-            art   = {'thumb': IMAGE_URL.format(show['images'].get('MP','')), 'fanart': IMAGE_URL.format(show['images'].get('PS',''))},
+            art   = {'thumb': IMAGE_URL.format(show['images'].get('MP',''))},
             path  = plugin.url_for(play, media_id=row['mediaId']),
             playable = True,
         )
