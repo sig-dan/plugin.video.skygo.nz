@@ -83,3 +83,8 @@ msgstr ""
 msgctxt "#30015"
 msgid "{title} - Episode {episode}"
 msgstr ""
+
+msgctxt "#30016"
+msgid "Failed to renew your session token.\n"
+"Try logout and login again."
+msgstr ""

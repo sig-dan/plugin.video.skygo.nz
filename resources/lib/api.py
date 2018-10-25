@@ -74,7 +74,7 @@ class API(object):
         access_token = data.get('sessiontoken')      
         if not access_token:
             self.logout()
-            raise Error(data.get('message', ''))
+            raise Exception(data.get('message', ''))
 
         self._save_auth(device_id, access_token)
 
@@ -90,7 +90,8 @@ class API(object):
         data = self._session.post(RENEW_URL, json=data).json()
         access_token = data.get('sessiontoken')
         if not access_token:
-            raise Error(data.get('message', ''))
+            #self.logout()
+            raise Exception(_.RENEW_TOKEN_ERROR)
 
         self._save_auth(userdata.get('device_id'), access_token)
 
@@ -114,7 +115,7 @@ class API(object):
 
         data = resp.json()
         if 'token' not in data:
-            raise Error(_.TOKEN_ERROR)
+            raise Exception(_.TOKEN_ERROR)
 
         return data['token']
 
