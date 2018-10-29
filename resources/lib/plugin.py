@@ -1,7 +1,7 @@
 from matthuisman import plugin, gui, cache, userdata, signals, inputstream
 
 from .api import API
-from .constants import CHANNELS_CACHE_KEY, CONTENT_CACHE_KEY, IMAGE_URL
+from .constants import CHANNELS_CACHE_KEY, CONTENT_CACHE_KEY, IMAGE_URL, PASSWORD_KEY
 from .language import _
 
 api = API()
@@ -158,11 +158,13 @@ def login():
 
         cache.set('password', password, expires=60)
 
-        try:
-            api.login(username=username, password=password)
+        if api.login(username=username, password=password):
+            if gui.yes_no(_.STORE_PASSWORD, heading=_.STORE_PASSWORD_HEADING):
+                userdata.set(PASSWORD_KEY, password)
+
             gui.refresh()
-        except Exception as e:
-            gui.ok(_(_.LOGIN_ERROR, error_msg=e))
+        else:
+            gui.ok(_.LOGIN_ERROR)
 
     cache.delete('password')
 

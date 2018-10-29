@@ -86,5 +86,14 @@ msgstr ""
 
 msgctxt "#30016"
 msgid "Failed to renew your session token.\n"
-"Try logout and login again."
+"You will need to login again."
+msgstr ""
+
+msgctxt "#30017"
+msgid "Save your password?"
+msgstr ""
+
+msgctxt "#30018"
+msgid "A login token will only work if used on a single device.\n"
+"Select Yes if using this addon on multiple devices."
 msgstr ""

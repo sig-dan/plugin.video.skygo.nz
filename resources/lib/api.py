@@ -8,7 +8,7 @@ from matthuisman.session import Session
 from matthuisman.log import log
 from matthuisman.cache import cached
 
-from .constants import HEADERS, AUTH_URL, RENEW_URL, CHANNELS_URL, TOKEN_URL, CHANNEL_EXPIRY, DEVICE_IP, CHANNELS_CACHE_KEY, CONTENT_EXPIRY, CONTENT_CACHE_KEY, CONTENT_URL, PLAY_URL, WIDEVINE_URL
+from .constants import HEADERS, AUTH_URL, RENEW_URL, CHANNELS_URL, TOKEN_URL, CHANNEL_EXPIRY, DEVICE_IP, CHANNELS_CACHE_KEY, CONTENT_EXPIRY, CONTENT_CACHE_KEY, CONTENT_URL, PLAY_URL, WIDEVINE_URL, PASSWORD_KEY
 from .language import _
 
 def sorted_nicely(l, key):
@@ -47,7 +47,8 @@ class API(object):
 
         data = self._session.get(CHANNELS_URL).json()
         for row in sorted_nicely(data['entries'], 'title'):
-            data = {'title': row['title'], 'description': row['description'], 'url': '', 'image': row['media$thumbnails'][0]['plfile$url']}
+            image = row['media$thumbnails'][0]['plfile$url'] if row['media$thumbnails'] else None
+            data = {'title': row['title'], 'description': row['description'], 'url': '', 'image': image}
             for item in row['media$content']:
                 if 'SkyGoStream' in item['plfile$assetTypes']:
                     data['url'] = item['plfile$url']
@@ -57,8 +58,11 @@ class API(object):
 
         return channels
         
-    def login(self, username, password):
-        log('API: Login')
+    def login(self, username, password, save_password=False):
+        self.logout()
+
+        if not password:
+            return False
 
         device_id = hashlib.md5(username).hexdigest()
 
@@ -73,32 +77,37 @@ class API(object):
         data = self._session.post(AUTH_URL, json=data).json()
         access_token = data.get('sessiontoken')      
         if not access_token:
-            self.logout()
-            raise Exception(data.get('message', ''))
+            return False
+
+        if save_password:
+            userdata.set(PASSWORD_KEY, password)
 
         self._save_auth(device_id, access_token)
+        return True
 
     def _renew_token(self):
-        log('API: Renew Token')
+        password = userdata.get(PASSWORD_KEY)
+        if password:
+            if not self.login(userdata.get('username'), password, save_password=True):
+                raise Exception(_.RENEW_TOKEN_ERROR)
+        else:
+            data = {
+                "deviceID": userdata.get('device_id'),
+                "deviceIP": DEVICE_IP,
+                "sessionToken": userdata.get('access_token'),
+            }
 
-        data = {
-            "deviceID": userdata.get('device_id'),
-            "deviceIP": DEVICE_IP,
-            "sessionToken": userdata.get('access_token'),
-        }
+            data = self._session.post(RENEW_URL, json=data).json()
+            access_token = data.get('sessiontoken')
+            if not access_token:
+                raise Exception(_.RENEW_TOKEN_ERROR)
 
-        data = self._session.post(RENEW_URL, json=data).json()
-        access_token = data.get('sessiontoken')
-        if not access_token:
-            #self.logout()
-            raise Exception(_.RENEW_TOKEN_ERROR)
-
-        self._save_auth(userdata.get('device_id'), access_token)
+            self._save_auth(userdata.get('device_id'), access_token)
 
     def _save_auth(self, device_id, access_token):
         userdata.set('device_id', device_id)
         userdata.set('access_token', access_token)
-        self.new_session()
+        self._set_access_token(access_token)
 
     def _get_play_token(self):
         params = {
@@ -159,7 +168,8 @@ class API(object):
         return resp.headers.get('location')
 
     def logout(self):
-        log('API: Logout')
         userdata.delete('device_id')
         userdata.delete('access_token')
-        self.new_session()
+        userdata.delete(PASSWORD_KEY)
+        self._session.clear_cookies()
+        self._logged_in = False
