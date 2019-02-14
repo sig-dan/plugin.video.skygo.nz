@@ -1,7 +1,8 @@
-from matthuisman import plugin, gui, cache, userdata, signals, inputstream
+from matthuisman import plugin, gui, userdata, signals, inputstream
+from matthuisman.exceptions import Error
 
 from .api import API
-from .constants import CHANNELS_CACHE_KEY, CONTENT_CACHE_KEY, IMAGE_URL, PASSWORD_KEY
+from .constants import IMAGE_URL, PASSWORD_KEY, HEADERS
 from .language import _
 
 api = API()
@@ -18,11 +19,11 @@ def home():
     if not api.logged_in:
         folder.add_item(label=_(_.LOGIN, _bold=True), path=plugin.url_for(login))
     else:
-        folder.add_item(label=_(_.LIVE_TV, _bold=True),  path=plugin.url_for(live_tv), cache_key=CHANNELS_CACHE_KEY)
-        folder.add_item(label=_(_.TV_SHOWS, _bold=True), path=plugin.url_for(tv_shows), cache_key=CONTENT_CACHE_KEY)
-        folder.add_item(label=_(_.MOVIES, _bold=True),   path=plugin.url_for(movies), cache_key=CONTENT_CACHE_KEY)
-        folder.add_item(label=_(_.SPORTS, _bold=True),   path=plugin.url_for(sports), cache_key=CONTENT_CACHE_KEY)
-        folder.add_item(label=_(_.BOX_SETS, _bold=True), path=plugin.url_for(box_sets), cache_key=CONTENT_CACHE_KEY)
+        folder.add_item(label=_(_.LIVE_TV, _bold=True),  path=plugin.url_for(live_tv))
+        folder.add_item(label=_(_.TV_SHOWS, _bold=True), path=plugin.url_for(tv_shows))
+        folder.add_item(label=_(_.MOVIES, _bold=True),   path=plugin.url_for(movies))
+        folder.add_item(label=_(_.SPORTS, _bold=True),   path=plugin.url_for(sports))
+        folder.add_item(label=_(_.BOX_SETS, _bold=True), path=plugin.url_for(box_sets))
 
         folder.add_item(label=_.LOGOUT, path=plugin.url_for(logout))
 
@@ -145,28 +146,22 @@ def reset_hidden():
 
 @plugin.route()
 def login():
-    while not api.logged_in:
-        username = gui.input(_.ASK_USERNAME, default=userdata.get('username', '')).strip()
-        if not username:
-            break
+    username = gui.input(_.ASK_USERNAME, default=userdata.get('username', '')).strip()
+    if not username:
+        return
 
-        userdata.set('username', username)
+    userdata.set('username', username)
 
-        password = gui.input(_.ASK_PASSWORD, default=cache.get('password', '')).strip()
-        if not password:
-            break
+    password = gui.input(_.ASK_PASSWORD).strip()
+    if not password:
+        return
 
-        cache.set('password', password, expires=60)
+    api.login(username=username, password=password)
 
-        if api.login(username=username, password=password):
-            if gui.yes_no(_.STORE_PASSWORD, heading=_.STORE_PASSWORD_HEADING):
-                userdata.set(PASSWORD_KEY, password)
+    if gui.yes_no(_.STORE_PASSWORD, heading=_.STORE_PASSWORD_HEADING):
+        userdata.set(PASSWORD_KEY, password)
 
-            gui.refresh()
-        else:
-            gui.ok(_.LOGIN_ERROR)
-
-    cache.delete('password')
+    gui.refresh()
 
 @plugin.route()
 def logout():
@@ -194,25 +189,4 @@ def play(media_id):
 @plugin.route()
 @plugin.login_required()
 def play_channel(channel):
-    channels = api.channels()
-    channel = channels.get(channel)
-    if not channel:
-        raise plugin.Error(_.NO_CHANNEL)
-
-    url = api.play_url(channel['url'])
-
-    if not url:
-        if gui.yes_no(_.NO_STREAM):
-            hide_channel(channel['title'])
-
-    elif 'faxs' in url:
-        if gui.yes_no(_.ADOBE_ERROR):
-            hide_channel(channel['title'])
-            
-    else:
-        return plugin.Item(
-            label = channel['title'],
-            art   = {'thumb': channel['image']},
-            info  = {'description': channel['description']},
-            path  = url,
-        )
+    return api.play_channel(channel)

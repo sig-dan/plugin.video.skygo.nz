@@ -6,10 +6,14 @@ from collections import OrderedDict
 from matthuisman import userdata, inputstream, plugin
 from matthuisman.session import Session
 from matthuisman.log import log
+from matthuisman.exceptions import Error
 from matthuisman.cache import cached
 
-from .constants import HEADERS, AUTH_URL, RENEW_URL, CHANNELS_URL, TOKEN_URL, CHANNEL_EXPIRY, DEVICE_IP, CHANNELS_CACHE_KEY, CONTENT_EXPIRY, CONTENT_CACHE_KEY, CONTENT_URL, PLAY_URL, WIDEVINE_URL, PASSWORD_KEY
+from .constants import HEADERS, AUTH_URL, RENEW_URL, CHANNELS_URL, TOKEN_URL, DEVICE_IP, CONTENT_URL, PLAY_URL, WIDEVINE_URL, PASSWORD_KEY, CHANNEL_EXPIRY, CHANNELS_CACHE_KEY
 from .language import _
+
+class APIError(Error):
+    pass
 
 def sorted_nicely(l, key):
     convert = lambda text: int(text) if text.isdigit() else text
@@ -23,15 +27,16 @@ class API(object):
         self._set_access_token(userdata.get('access_token'))
 
     def _set_access_token(self, token):
-        if token:
-            self._session.headers.update({'sky-x-access-token': token})
-            self._logged_in = True
+        if not token:
+            return
+
+        self._session.headers.update({'sky-x-access-token': token})
+        self._logged_in = True
 
     @property
     def logged_in(self):
         return self._logged_in
 
-    @cached(expires=CONTENT_EXPIRY, key=CONTENT_CACHE_KEY)
     def content(self):
         content = OrderedDict()
 
@@ -46,6 +51,7 @@ class API(object):
         channels = OrderedDict()
 
         data = self._session.get(CHANNELS_URL).json()
+
         for row in sorted_nicely(data['entries'], 'title'):
             image = row['media$thumbnails'][0]['plfile$url'] if row['media$thumbnails'] else None
             data = {'title': row['title'], 'description': row['description'], 'url': '', 'image': image}
@@ -58,12 +64,7 @@ class API(object):
 
         return channels
         
-    def login(self, username, password, save_password=False):
-        self.logout()
-
-        if not password:
-            return False
-
+    def login(self, username, password):
         device_id = hashlib.md5(username).hexdigest()
 
         data = {
@@ -74,42 +75,45 @@ class API(object):
             "username": username
         }
 
-        data = self._session.post(AUTH_URL, json=data).json()
-        access_token = data.get('sessiontoken')      
-        if not access_token:
-            return False
+        resp = self._session.post(AUTH_URL, json=data)
+        data = resp.json()
+        if resp.status_code != 200 or 'sessiontoken' not in data:
+            raise APIError(_(_.LOGIN_ERROR, message=data.get('message')))
 
-        if save_password:
-            userdata.set(PASSWORD_KEY, password)
+        access_token = data['sessiontoken']
 
-        self._save_auth(device_id, access_token)
-        return True
+        userdata.set('access_token', access_token)
+        userdata.set('device_id', device_id)
+
+        self._set_access_token(access_token)
 
     def _renew_token(self):
         password = userdata.get(PASSWORD_KEY)
+
         if password:
-            if not self.login(userdata.get('username'), password, save_password=True):
-                raise Exception(_.RENEW_TOKEN_ERROR)
-        else:
-            data = {
-                "deviceID": userdata.get('device_id'),
-                "deviceIP": DEVICE_IP,
-                "sessionToken": userdata.get('access_token'),
-            }
+            self.login(userdata.get('username'), password)
+            return
 
-            data = self._session.post(RENEW_URL, json=data).json()
-            access_token = data.get('sessiontoken')
-            if not access_token:
-                raise Exception(_.RENEW_TOKEN_ERROR)
+        data = {
+            "deviceID": userdata.get('device_id'),
+            "deviceIP": DEVICE_IP,
+            "sessionToken": userdata.get('access_token'),
+        }
 
-            self._save_auth(userdata.get('device_id'), access_token)
+        resp = self._session.post(RENEW_URL, json=data)
+        data = resp.json()
 
-    def _save_auth(self, device_id, access_token):
-        userdata.set('device_id', device_id)
+        if resp.status_code != 200 or 'sessiontoken' not in data:
+            raise APIError(_(_.RENEW_TOKEN_ERROR, message=data.get('message')))
+
+        access_token = data['sessiontoken']
         userdata.set('access_token', access_token)
+
         self._set_access_token(access_token)
 
     def _get_play_token(self):
+        self._renew_token()
+
         params = {
             'profileId':   userdata.get('device_id'),
             'deviceId':    userdata.get('device_id'),
@@ -118,13 +122,10 @@ class API(object):
         }
 
         resp = self._session.get(TOKEN_URL, params=params)
-        if resp.status_code == 403:
-            self._renew_token()
-            resp = self._session.get(TOKEN_URL, params=params)
-
         data = resp.json()
-        if 'token' not in data:
-            raise Exception(_.TOKEN_ERROR)
+
+        if resp.status_code != 200 or 'token' not in data:
+            raise APIError(_(_.TOKEN_ERROR, message=data.get('message')))
 
         return data['token']
 
@@ -140,15 +141,23 @@ class API(object):
 
         data = self._session.get(PLAY_URL, params=params).json()
 
-        url = data['entries'][0]['media$content'][0]['plfile$url']
-        url = '{}&auth={}&formats=mpeg-dash&format=SMIL&tracking=true'.format(url, token)
+        videos = data['entries'][0]['media$content']
 
-        page = self._session.get(url).text
-        if 'LicenseNotGranted' in page:
-            raise Exception(_.NO_ACCESS)
+        chosen = videos[0]
+        for video in videos:
+            if video['plfile$format'] == 'MPEG-DASH':
+                chosen = video
+                break
+ 
+        url = '{}&auth={}&formats=mpeg-dash&tracking=true'.format(chosen['plfile$url'], token)
+        resp = self._session.get(url, allow_redirects=False)
 
-        url = re.search('video src="(.*?)"', page).group(1)
-        pid = re.search('pid=(.*?)\|', page).group(1)
+        if resp.status_code != 302:
+            data = resp.json()
+            raise APIError(_(_.PLAY_ERROR, message=data.get('description')))
+
+        url = resp.headers.get('location')
+        pid = chosen['plfile$url'].split('?')[0].split('/')[-1]
 
         return plugin.Item(
             path = url,
@@ -161,15 +170,35 @@ class API(object):
             ),
         )
 
-    def play_url(self, url):
+    def play_channel(self, channel):
+        channels = self.channels()
+        channel = channels.get(channel)
+        if not channel:
+            raise APIError(_.NO_CHANNEL)
+
         token = self._get_play_token()
-        url = '{}&auth={}'.format(url, token)
+        url = '{}&auth={}'.format(channel['url'], token)
         resp = self._session.get(url, allow_redirects=False)
-        return resp.headers.get('location')
+
+        if resp.status_code != 302:
+            data = resp.json()
+            raise APIError(_(_.PLAY_ERROR, message=data.get('description')))
+
+        url = resp.headers.get('location')
+
+        if 'faxs' in url:
+            raise APIError(_.ADOBE_ERROR)
+
+        return plugin.Item(
+            path = url,
+            label = channel['title'],
+            art   = {'thumb': channel['image']},
+            info  = {'description': channel['description']},
+            #inputstream = inputstream.HLS(), # not until cookie support
+        )
 
     def logout(self):
         userdata.delete('device_id')
         userdata.delete('access_token')
         userdata.delete(PASSWORD_KEY)
-        self._session.clear_cookies()
         self._logged_in = False

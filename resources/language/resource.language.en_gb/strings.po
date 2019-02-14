@@ -33,19 +33,18 @@ msgid "Unable to find that channel"
 msgstr ""
 
 msgctxt "#30004"
-msgid "Unable to get the stream for this channel.\n"
-"Possibly your subscription does not include this channel.\n"
-"Would you like to hide it?"
+msgid "Failed to login.\n"
+"Server Message: {message}"
 msgstr ""
 
 msgctxt "#30005"
 msgid "This stream is protected by Adobe Access DRM and can not be played in KODI.\n"
-"Would you like to hide it?"
+"You can hide this channel via the context menu."
 msgstr ""
 
 msgctxt "#30006"
 msgid "Error getting play token.\n"
-"Try logout and login again."
+"Server Message: {message}"
 msgstr ""
 
 msgctxt "#30007"
@@ -77,7 +76,8 @@ msgid "Box Sets"
 msgstr ""
 
 msgctxt "#30014"
-msgid "Your subscription does not include access to this content"
+msgid "Unable to get content URL\n"
+"Server Message: {message}"
 msgstr ""
 
 msgctxt "#30015"
@@ -86,7 +86,8 @@ msgstr ""
 
 msgctxt "#30016"
 msgid "Failed to renew your session token.\n"
-"You will need to login again."
+"You may need to logout and then login again.\n"
+"Server Message: {message}"
 msgstr ""
 
 msgctxt "#30017"
@@ -113,7 +114,7 @@ msgid "Are you sure you want to clear this plugins data?"
 msgstr ""
 
 msgctxt "#32003"
-msgid "Clear Data OK"
+msgid "Data Cleared"
 msgstr ""
 
 msgctxt "#32004"
@@ -234,4 +235,12 @@ msgstr ""
 
 msgctxt "#32031"
 msgid "No Results"
+msgstr ""
+
+msgctxt "#32032"
+msgid "Unexpected Error :("
+msgstr ""
+
+msgctxt "#32033"
+msgid "Failed to download required file: {filename}"
 msgstr ""

@@ -88,10 +88,10 @@ def delete(key):
 
 def empty():
     deleted = Cache.truncate()
-    log.info('Cache: Deleted {} Rows'.format(deleted))
+    log('Cache: Deleted {} Rows'.format(deleted))
 
 def remove_expired():
     deleted = Cache.delete_where(Cache.expires < int(time()))
-    log.info('Cache: Deleted {} Expired Rows'.format(deleted))
+    log('Cache: Deleted {} Expired Rows'.format(deleted))
 
 database.tables.append(Cache)

@@ -9,6 +9,7 @@ ON_SERVICE      = 'on_service'
 BEFORE_DISPATCH = 'before_dispatch'
 AFTER_DISPATCH  = 'after_dispatch'
 ON_ERROR        = 'on_error'
+ON_EXCEPTION    = 'on_exception'
 
 def on(signal):
     def decorator(f):
