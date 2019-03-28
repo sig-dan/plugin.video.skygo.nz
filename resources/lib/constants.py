@@ -15,7 +15,4 @@ CONTENT_URL  = 'https://d3207bvak4txrg.cloudfront.net/v1/content'
 IMAGE_URL    = 'https://prod-images.skygo.co.nz/{}'
 PLAY_URL     = 'https://feed.theplatform.com/f/7tMqSC/T2XJ65T_soBz'
 WIDEVINE_URL = 'https://widevine.entitlement.theplatform.com/wv/web/ModularDrm/getWidevineLicense?schema=1.0&token={token}&form=json&account=http://access.auth.theplatform.com/data/Account/2682481291&_releasePid={pid}&_widevineChallenge={challenge}'
-
-CHANNEL_EXPIRY = (60*60*1) #1 hour
-CHANNELS_CACHE_KEY = 'channels'
 PASSWORD_KEY = 'Z03Px'

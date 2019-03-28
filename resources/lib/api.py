@@ -7,9 +7,8 @@ from matthuisman import userdata, inputstream, plugin
 from matthuisman.session import Session
 from matthuisman.log import log
 from matthuisman.exceptions import Error
-from matthuisman.cache import cached
 
-from .constants import HEADERS, AUTH_URL, RENEW_URL, CHANNELS_URL, TOKEN_URL, DEVICE_IP, CONTENT_URL, PLAY_URL, WIDEVINE_URL, PASSWORD_KEY, CHANNEL_EXPIRY, CHANNELS_CACHE_KEY
+from .constants import HEADERS, AUTH_URL, RENEW_URL, CHANNELS_URL, TOKEN_URL, DEVICE_IP, CONTENT_URL, PLAY_URL, WIDEVINE_URL, PASSWORD_KEY
 from .language import _
 
 class APIError(Error):
@@ -22,20 +21,17 @@ def sorted_nicely(l, key):
 
 class API(object):
     def new_session(self):
-        self._logged_in = False
+        self.logged_in = False
         self._session = Session(HEADERS)
-        self._set_access_token(userdata.get('access_token'))
+        self._set_authentication()
 
-    def _set_access_token(self, token):
+    def _set_authentication(self):
+        token = userdata.get('access_token')
         if not token:
             return
 
         self._session.headers.update({'sky-x-access-token': token})
-        self._logged_in = True
-
-    @property
-    def logged_in(self):
-        return self._logged_in
+        self.logged_in = True
 
     def content(self):
         content = OrderedDict()
@@ -46,7 +42,6 @@ class API(object):
 
         return content
 
-    @cached(expires=CHANNEL_EXPIRY, key=CHANNELS_CACHE_KEY)
     def channels(self):
         channels = OrderedDict()
 
@@ -80,12 +75,10 @@ class API(object):
         if resp.status_code != 200 or 'sessiontoken' not in data:
             raise APIError(_(_.LOGIN_ERROR, message=data.get('message')))
 
-        access_token = data['sessiontoken']
-
-        userdata.set('access_token', access_token)
+        userdata.set('access_token', data['sessiontoken'])
         userdata.set('device_id', device_id)
 
-        self._set_access_token(access_token)
+        self._set_authentication()
 
     def _renew_token(self):
         password = userdata.get(PASSWORD_KEY)
@@ -106,10 +99,9 @@ class API(object):
         if resp.status_code != 200 or 'sessiontoken' not in data:
             raise APIError(_(_.RENEW_TOKEN_ERROR, message=data.get('message')))
 
-        access_token = data['sessiontoken']
-        userdata.set('access_token', access_token)
+        userdata.set('access_token', data['sessiontoken'])
 
-        self._set_access_token(access_token)
+        self._set_authentication()
 
     def _get_play_token(self):
         self._renew_token()
@@ -201,4 +193,4 @@ class API(object):
         userdata.delete('device_id')
         userdata.delete('access_token')
         userdata.delete(PASSWORD_KEY)
-        self._logged_in = False
+        self.new_session()

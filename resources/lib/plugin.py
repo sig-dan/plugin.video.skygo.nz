@@ -1,5 +1,6 @@
 from matthuisman import plugin, gui, userdata, signals, inputstream
 from matthuisman.exceptions import Error
+from matthuisman.constants import ADDON_ID
 
 from .api import API
 from .constants import IMAGE_URL, PASSWORD_KEY, HEADERS
@@ -152,7 +153,7 @@ def login():
 
     userdata.set('username', username)
 
-    password = gui.input(_.ASK_PASSWORD).strip()
+    password = gui.input(_.ASK_PASSWORD, hide_input=True).strip()
     if not password:
         return
 
