@@ -1,11 +1,11 @@
 from urlparse import parse_qsl
 from urllib import urlencode
 
-from .constants import ROUTE_TAG, ADDON_ID, ROUTE_LIVE_TAG, ROUTE_LIVE_SUFFIX
+from . import signals
+from .constants import ROUTE_TAG, ADDON_ID, ROUTE_LIVE_TAG, ROUTE_LIVE_SUFFIX, ROUTE_URL_TAG
 from .log import log
 from .language import _
-from . import signals
-from .exceptions import Error, RouterError
+from .exceptions import RouterError
 
 _routes = {}
 
@@ -26,12 +26,12 @@ def route(url):
 def parse_url(url):
     if url.startswith('?'):
         params   = dict(parse_qsl(url.lstrip('?')))
-        params.pop(ROUTE_LIVE_TAG, None)
-
         _url     = params.pop(ROUTE_TAG, '')
     else:
         params = {}
         _url = url
+
+    params[ROUTE_URL_TAG] = url
 
     function = _routes.get(_url)
 
@@ -60,6 +60,9 @@ def build_url(url, is_live=False, addon_id=ADDON_ID, **kwargs):
 
     params = []
     for k in sorted(kwargs):
+        if kwargs[k] == None:
+            continue
+
         try: params.append((k, unicode(kwargs[k]).encode('utf-8')))
         except: params.append((k, kwargs[k]))
 
@@ -70,15 +73,9 @@ def build_url(url, is_live=False, addon_id=ADDON_ID, **kwargs):
 
 # router.dispatch('?_=_settings')
 def dispatch(url):
-    try:
+    with signals.throwable():
         signals.emit(signals.BEFORE_DISPATCH)
         function, params = parse_url(url)
         function(**params)
-    except Error as e:
-        #expected errors
-        signals.emit(signals.ON_ERROR, e)
-    except Exception as e:
-        #unexpected errors
-        signals.emit(signals.ON_EXCEPTION, e)
-    finally:
-        signals.emit(signals.AFTER_DISPATCH)
+
+    signals.emit(signals.AFTER_DISPATCH)

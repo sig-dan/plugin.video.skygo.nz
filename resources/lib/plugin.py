@@ -14,7 +14,7 @@ def before_dispatch():
     plugin.logged_in = api.logged_in
 
 @plugin.route('')
-def home():
+def home(**kwargs):
     folder = plugin.Folder()
 
     if not api.logged_in:
@@ -26,14 +26,12 @@ def home():
         folder.add_item(label=_(_.SPORTS, _bold=True),   path=plugin.url_for(sports))
         folder.add_item(label=_(_.BOX_SETS, _bold=True), path=plugin.url_for(box_sets))
 
-        folder.add_item(label=_.LOGOUT, path=plugin.url_for(logout))
-
     folder.add_item(label=_.SETTINGS, path=plugin.url_for(plugin.ROUTE_SETTINGS))
 
     return folder
 
 @plugin.route()
-def live_tv():
+def live_tv(**kwargs):
     folder = plugin.Folder(title=_.LIVE_TV)
 
     hidden = userdata.get('hidden', [])
@@ -54,19 +52,19 @@ def live_tv():
     return folder
 
 @plugin.route()
-def tv_shows():
+def tv_shows(**kwargs):
     folder = plugin.Folder(title=_.TV_SHOWS)
     folder.add_items(_shows('tvshows'))
     return folder
 
 @plugin.route()
-def sports():
+def sports(**kwargs):
     folder = plugin.Folder(title=_.SPORTS)
     folder.add_items(_shows('sport'))
     return folder
 
 @plugin.route()
-def box_sets():
+def box_sets(**kwargs):
     folder = plugin.Folder(title=_.BOX_SETS)
     folder.add_items(_shows('boxsets'))
     return folder
@@ -93,7 +91,7 @@ def _shows(section):
     return items
 
 @plugin.route()
-def movies():
+def movies(**kwargs):
     folder = plugin.Folder(title=_.MOVIES)
     
     for row in api.content().values():
@@ -115,7 +113,7 @@ def movies():
     return folder
 
 @plugin.route()
-def show(show_id):
+def show(show_id, **kwargs):
     show = api.content()[show_id]
     folder = plugin.Folder(title=show['title'])
     
@@ -141,12 +139,12 @@ def show(show_id):
     return folder
 
 @plugin.route()
-def reset_hidden():
+def reset_hidden(**kwargs):
     userdata.delete('hidden')
     gui.notification(_.RESET_HIDDEN_OK)
 
 @plugin.route()
-def login():
+def login(**kwargs):
     username = gui.input(_.ASK_USERNAME, default=userdata.get('username', '')).strip()
     if not username:
         return
@@ -165,7 +163,7 @@ def login():
     gui.refresh()
 
 @plugin.route()
-def logout():
+def logout(**kwargs):
     if not gui.yes_no(_.LOGOUT_YES_NO):
         return
 
@@ -173,7 +171,7 @@ def logout():
     gui.refresh()
 
 @plugin.route()
-def hide_channel(channel):
+def hide_channel(channel, **kwargs):
     hidden = userdata.get('hidden', [])
 
     if channel not in hidden:
@@ -184,10 +182,10 @@ def hide_channel(channel):
 
 @plugin.route()
 @plugin.login_required()
-def play(media_id):
+def play(media_id, **kwargs):
     return api.play_media(media_id)
 
 @plugin.route()
 @plugin.login_required()
-def play_channel(channel):
+def play_channel(channel, **kwargs):
     return api.play_channel(channel)

@@ -50,6 +50,7 @@ ROUTE_SERVICE          = '_service'
 ROUTE_SERVICE_INTERVAL = (60*5)
 ROUTE_LIVE_TAG         = '_l'
 ROUTE_LIVE_SUFFIX      = '.pvr'
+ROUTE_URL_TAG          = '_url'
 #################
 
 #### INPUTSTREAM ADAPTIVE #####
@@ -73,3 +74,6 @@ LOG_FORMAT = u'%(name)s - %(message)s'
 SESSION_TIMEOUT  = (5, 10)
 SESSION_ATTEMPTS = 2
 #################
+
+#### GUI ####
+GUI_DEFAULT_AUTOCLOSE = 120000 #2mins

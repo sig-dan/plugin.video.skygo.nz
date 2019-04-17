@@ -68,6 +68,8 @@ class BaseLanguage(object):
     PLAYBACK                    = 32035
     ADVANCED                    = 32036
     VERIFY_SSL                  = 32037
+    IA_OVERRIDE                 = 32038
+    SERVICE_DELAY               = 32039
 
     def __getattribute__(self, name):
         attr = object.__getattribute__(self, name)
