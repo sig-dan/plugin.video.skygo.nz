@@ -1,5 +1,5 @@
 from urlparse import parse_qsl
-from urllib import urlencode
+from urllib import urlencode, unquote
 
 from . import signals
 from .constants import ROUTE_TAG, ADDON_ID, ROUTE_LIVE_TAG, ROUTE_LIVE_SUFFIX, ROUTE_URL_TAG
@@ -25,7 +25,10 @@ def route(url):
 # @router.parse_url('?_=_settings')
 def parse_url(url):
     if url.startswith('?'):
-        params   = dict(parse_qsl(url.lstrip('?')))
+        params = dict(parse_qsl(url.lstrip('?')))
+        for key in params:
+            params[key] = unquote(params[key])
+
         _url     = params.pop(ROUTE_TAG, '')
     else:
         params = {}
@@ -42,21 +45,22 @@ def parse_url(url):
 
     return function, params
 
-def url_for_func(func, is_live=False, **kwargs):
+def url_for_func(func, **kwargs):
     for url in _routes:
         if _routes[url].__name__ == func.__name__:
-            return build_url(url, is_live, **kwargs)
+            return build_url(url, **kwargs)
 
     raise RouterError(_(_.ROUTER_NO_URL, function_name=func.__name__))
 
-def url_for(func_or_url, is_live=False, **kwargs):
+def url_for(func_or_url, **kwargs):
     if callable(func_or_url):
-        return url_for_func(func_or_url, is_live, **kwargs)
+        return url_for_func(func_or_url, **kwargs)
     else:
-        return build_url(func_or_url, is_live, **kwargs)
+        return build_url(func_or_url, **kwargs)
 
-def build_url(url, is_live=False, addon_id=ADDON_ID, **kwargs):
+def build_url(url, addon_id=ADDON_ID, **kwargs):
     kwargs[ROUTE_TAG] = url
+    is_live = kwargs.pop('_is_live', False)
 
     params = []
     for k in sorted(kwargs):

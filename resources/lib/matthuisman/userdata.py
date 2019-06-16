@@ -1,11 +1,7 @@
-from . import settings, signals
+from . import settings
 from .constants import USERDATA_KEY
 
-_userdata = {}
-
-@signals.on(signals.BEFORE_DISPATCH)
-def reload():
-    _userdata.update(settings.getDict(USERDATA_KEY, {}))
+_userdata = settings.getDict(USERDATA_KEY, {})
 
 def get(key, default=None):
     return _userdata.get(key, default)

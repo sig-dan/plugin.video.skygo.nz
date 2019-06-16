@@ -5,7 +5,7 @@ from functools import wraps
 import xbmc, xbmcplugin
 
 from . import router, gui, settings, userdata, inputstream, signals
-from .constants import ROUTE_SETTINGS, ROUTE_RESET, ROUTE_SERVICE, ROUTE_CLEAR_CACHE, ROUTE_IA_SETTINGS, ROUTE_IA_INSTALL, ADDON_ICON, ADDON_FANART, ADDON_ID
+from .constants import ROUTE_SETTINGS, ROUTE_RESET, ROUTE_SERVICE, ROUTE_CLEAR_CACHE, ROUTE_IA_SETTINGS, ROUTE_IA_INSTALL, ROUTE_IA_QUALITY, ADDON_ICON, ADDON_FANART, ADDON_ID, ADDON_NAME
 from .log import log
 from .language import _
 from .exceptions import PluginError
@@ -50,6 +50,25 @@ def route(url=None):
         return decorated_function
     return lambda f: decorator(f, url)
 
+# @plugin.merge()
+def merge():
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            xbmc.executebuiltin('Skin.SetString(merge,started)')
+
+            try:
+                result = f(*args, **kwargs)
+            except:
+                xbmc.executebuiltin('Skin.SetString(merge,error)')
+                raise
+            else:
+                xbmc.executebuiltin('Skin.SetString(merge,ok)')
+                return result
+                
+        return decorated_function
+    return lambda f: decorator(f)
+
 def resolve():
     if _handle() > 0:
         xbmcplugin.endOfDirectory(_handle(), succeeded=False, updateListing=False, cacheToDisc=False)
@@ -61,8 +80,8 @@ def _error(e):
     except:
         error = e.message.encode('utf-8')
 
-    if not hasattr(e, 'heading'):
-        e.heading = _.PLUGIN_ERROR
+    if not hasattr(e, 'heading') or not e.heading:
+        e.heading = _(_.PLUGIN_ERROR, addon=ADDON_NAME)
 
     log.error(error)
     _close()
@@ -80,6 +99,10 @@ def _exception(e):
 @route('')
 def _home(**kwargs):
     raise PluginError(_.PLUGIN_NO_DEFAULT_ROUTE)
+
+@route(ROUTE_IA_QUALITY)
+def _ia_quality(**kwargs):
+    inputstream.set_quality()
 
 @route(ROUTE_IA_SETTINGS)
 def _ia_settings(**kwargs):
@@ -152,7 +175,7 @@ class Item(gui.Item):
 
 #Plugin.Folder()
 class Folder(object):
-    def __init__(self, items=None, title=None, content='videos', updateListing=False, cacheToDisc=True, sort_methods=None, thunb=None, fanart=None):
+    def __init__(self, items=None, title=None, content='videos', updateListing=False, cacheToDisc=True, sort_methods=None, thunb=None, fanart=None, no_items_label=_.NO_ITEMS):
         self.items = items or []
         self.title = title
         self.content = content
@@ -161,14 +184,19 @@ class Folder(object):
         self.sort_methods = sort_methods or [xbmcplugin.SORT_METHOD_UNSORTED, xbmcplugin.SORT_METHOD_LABEL, xbmcplugin.SORT_METHOD_DATEADDED]
         self.thunb = thunb or ADDON_ICON
         self.fanart = fanart or ADDON_FANART
+        self.no_items_label = no_items_label
 
     def display(self):
         handle = _handle()
 
-        for item in self.items:
-            if not item:
-                continue
+        items = [i for i in self.items if i]
+        if not items and self.no_items_label:
+            items.append(Item(
+                label = _(self.no_items_label, _label=True), 
+                is_folder = False,
+            ))
 
+        for item in items:
             item.art['thumb'] = item.art.get('thumb') or self.thunb
             item.art['fanart'] = item.art.get('fanart') or self.fanart
 

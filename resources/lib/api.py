@@ -3,7 +3,7 @@ import time
 import re
 from collections import OrderedDict
 
-from matthuisman import userdata, inputstream, plugin, settings
+from matthuisman import userdata, inputstream, plugin
 from matthuisman.session import Session
 from matthuisman.log import log
 from matthuisman.exceptions import Error
@@ -28,13 +28,10 @@ class API(object):
     def _set_authentication(self):
         token = userdata.get('access_token')
         if not token:
-            settings.setBool('_logged_in', False)
             return
 
         self._session.headers.update({'sky-x-access-token': token})
         self.logged_in = True
-
-        settings.setBool('_logged_in', True)
 
     def content(self):
         content = OrderedDict()

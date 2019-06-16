@@ -26,6 +26,8 @@ def home(**kwargs):
         folder.add_item(label=_(_.SPORTS, _bold=True),   path=plugin.url_for(sports))
         folder.add_item(label=_(_.BOX_SETS, _bold=True), path=plugin.url_for(box_sets))
 
+        folder.add_item(label=_.LOGOUT, path=plugin.url_for(logout))
+
     folder.add_item(label=_.SETTINGS, path=plugin.url_for(plugin.ROUTE_SETTINGS))
 
     return folder
@@ -41,12 +43,12 @@ def live_tv(**kwargs):
             continue
 
         folder.add_item(
-            label = channel['title'],
-            art   = {'thumb': channel['image']},
-            path  = plugin.url_for(play_channel, is_live=True, channel=channel['title']),
-            info  = {'description': channel['description']},
+            label    = channel['title'],
+            art      = {'thumb': channel['image']},
+            path     = plugin.url_for(play_channel, channel=channel['title'], _is_live=True),
+            info     = {'description': channel['description']},
             playable = True,
-            context = ((_.HIDE_CHANNEL, 'XBMC.RunPlugin({})'.format(plugin.url_for(hide_channel, channel=channel['title']))),)
+            context  = ((_.HIDE_CHANNEL, 'XBMC.RunPlugin({})'.format(plugin.url_for(hide_channel, channel=channel['title']))),)
         )
 
     return folder
@@ -114,7 +116,7 @@ def movies(**kwargs):
 
 @plugin.route()
 def show(show_id, **kwargs):
-    show = api.content()[show_id]
+    show   = api.content()[show_id]
     folder = plugin.Folder(title=show['title'])
     
     for row in sorted(show.get('subContent', []), key=lambda x: x.get('episodeNumber', x['episodeTitle'])):

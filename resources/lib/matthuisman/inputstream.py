@@ -1,11 +1,15 @@
-import os, platform, re, shutil
+import os
+import platform
+import re
+import shutil
+
 import xbmc, xbmcaddon
 
 from . import gui, settings
 from .log import log
-from .constants import IA_ADDON_ID, IA_VERSION_KEY, IA_HLS_MIN_VER, IA_MPD_MIN_VER, IA_MODULES_URL
+from .constants import IA_ADDON_ID, IA_VERSION_KEY, IA_HLS_MIN_VER, IA_MPD_MIN_VER, IA_MODULES_URL, SESSION_CHUNKSIZE, ADDON_DEV
 from .language import _
-from .util import get_kodi_version
+from .util import get_kodi_version, md5sum, remove_file
 from .exceptions import InputStreamError
 
 class InputstreamItem(object):
@@ -53,18 +57,50 @@ class Widevine(InputstreamItem):
     def check(self):
         return install_widevine()
 
-def get_ia_addon():
+def get_ia_addon(required=False):
     try:
         xbmc.executebuiltin('InstallAddon({})'.format(IA_ADDON_ID), True)
         xbmc.executeJSONRPC('{{"jsonrpc":"2.0","id":1,"method":"Addons.SetAddonEnabled","params":{{"addonid":"{}","enabled":true}}}}'.format(IA_ADDON_ID))
         return xbmcaddon.Addon(IA_ADDON_ID)
     except:
-        return None
+        pass
+
+    if required:
+        raise InputStreamError(_.IA_NOT_FOUND)
+
+    return None
+
+def set_quality():
+    ia_addon = get_ia_addon(required=True)
+
+    options = [
+        #Label,           Min bandwith,  Max bandwith
+        [_.IA_QUALITY_MAX,   100000000,  100000000],
+        [_.IA_QUALITY_1080P, 8000000,    8000000],
+        [_.IA_QUALITY_720P,  6000000,    6000000],
+        [_.IA_QUALITY_540P,  4000000,    4000000],
+        [_.IA_QUALITY_480P,  2000000,    2000000],
+    ]
+
+    index = gui.select(heading=_.IA_QUALITY, options=[_(o[0], bandwidth=o[1]/1000000) for o in options])
+    if index < 0:
+        return
+
+    selected = options[index]
+
+    ia_addon.setSetting('IGNOREDISPLAY', 'true')
+    ia_addon.setSetting('STREAMSELECTION', '0')
+    ia_addon.setSetting('MEDIATYPE', '0')
+    ia_addon.setSetting('MAXRESOLUTION', '0')
+    ia_addon.setSetting('MAXRESOLUTIONSECURE', '0')
+
+    ia_addon.setSetting('MINBANDWIDTH', str(selected[1]))
+    ia_addon.setSetting('MAXBANDWIDTH', str(selected[2]))
+
+    gui.notification(_(_.IA_QUALITY_SET, bandwidth=selected[1]/1000000))
 
 def open_settings():
-    ia_addon = get_ia_addon()
-    if not ia_addon:
-        raise InputStreamError(_.IA_NOT_FOUND)
+    ia_addon = get_ia_addon(required=True)
     ia_addon.openSettings()
 
 def supports_hls():
@@ -80,26 +116,10 @@ def supports_playready():
     return bool(ia_addon and get_kodi_version() > 17 and xbmc.getCondVisibility('system.platform.android'))
 
 def install_widevine(reinstall=False):
-    ia_addon = get_ia_addon()
-    if not ia_addon:
-        raise InputStreamError(_.IA_NOT_FOUND)
-
+    ia_addon     = get_ia_addon(required=True)
     system, arch = _get_system_arch()
     kodi_version = get_kodi_version()
     ver_slug     = system + arch + str(kodi_version) + ia_addon.getAddonInfo('version')
-
-    if not reinstall and ver_slug == ia_addon.getSetting(IA_VERSION_KEY):
-        return True
-
-    ia_addon.setSetting(IA_VERSION_KEY, '')
-
-    from .session import Session
-
-    r = Session().get(IA_MODULES_URL)
-    if r.status_code != 200:
-        raise InputStreamError(_(_.ERROR_DOWNLOADING_FILE, filename=IA_MODULES_URL.split('/')[-1]))
-
-    widevine = r.json()['widevine']
 
     if kodi_version < 18:
         raise InputStreamError(_(_.IA_KODI18_REQUIRED, system=system))
@@ -113,18 +133,33 @@ def install_widevine(reinstall=False):
     elif 'aarch64' in arch:
         raise InputStreamError(_.IA_AARCH64_ERROR)
 
-    elif system + arch not in widevine['platforms']:
+    elif not reinstall and ver_slug == ia_addon.getSetting(IA_VERSION_KEY):
+        return True
+
+    ## DO INSTALL ##
+
+    ia_addon.setSetting(IA_VERSION_KEY, '')
+
+    from .session import Session
+
+    r = Session().get(IA_MODULES_URL)
+    if r.status_code != 200:
+        raise InputStreamError(_(_.ERROR_DOWNLOADING_FILE, filename=IA_MODULES_URL.split('/')[-1]))
+
+    widevine    = r.json()['widevine']
+    wv_platform = widevine['platforms'].get(system + arch, None)
+
+    if not wv_platform:
         raise InputStreamError(_(_.IA_NOT_SUPPORTED, system=system, arch=arch, kodi_version=kodi_version))
 
     decryptpath = xbmc.translatePath(ia_addon.getSetting('DECRYPTERPATH')).decode("utf-8")
-    src, dst    = widevine['platforms'][system + arch]
-    url         = widevine['base_url'] + src
-    wv_path     = os.path.join(decryptpath, dst)
+    url         = widevine['base_url'] + wv_platform['src']
+    wv_path     = os.path.join(decryptpath, wv_platform['dst'])
 
     if not os.path.isdir(decryptpath):
         os.makedirs(decryptpath)
 
-    if (not os.path.exists(wv_path) or gui.yes_no(_.IA_OVERRIDE)) and not _download(url, wv_path):
+    if not _download(url, wv_path, wv_platform['md5']):
         return False
 
     ia_addon.setSetting(IA_VERSION_KEY, ver_slug)
@@ -156,24 +191,30 @@ def _get_system_arch():
 
     return system, arch
 
-def _download(url, dst_path):
+def _download(url, dst_path, md5=None):
+    filename   = url.split('/')[-1]
+    downloaded = 0
+
+    if os.path.exists(dst_path):
+        if md5 and md5sum(dst_path) == md5:
+            log.debug('MD5 of local file {} same. Skipping download'.format(filename))
+            return True
+        elif not gui.yes_no(_.IA_OVERRIDE):
+            return False
+        else:
+            remove_file(dst_path)
+            
     from .session import Session
 
-    with gui.progress(_(_.IA_DOWNLOADING_FILE, url=url.split('/')[-1]), heading=_.IA_WIDEVINE_DRM) as progress:
-        
+    with gui.progress(_(_.IA_DOWNLOADING_FILE, url=filename), heading=_.IA_WIDEVINE_DRM) as progress:
         resp = Session().get(url, stream=True)
         if resp.status_code != 200:
-            raise InputStreamError(_(_.ERROR_DOWNLOADING_FILE, filename=url.split('/')[-1]))
+            raise InputStreamError(_(_.ERROR_DOWNLOADING_FILE, filename=filename))
 
         total_length = float(resp.headers.get('content-length', 1))
 
-        if os.path.exists(dst_path):
-            os.remove(dst_path)
-
         with open(dst_path, 'wb') as f:
-            chunk_size = 1024
-            downloaded = 0
-            for chunk in resp.iter_content(chunk_size=chunk_size):
+            for chunk in resp.iter_content(chunk_size=SESSION_CHUNKSIZE):
                 f.write(chunk)
                 downloaded += len(chunk)
                 percent = int(downloaded*100/total_length)
@@ -185,11 +226,12 @@ def _download(url, dst_path):
                 progress.update(percent)
 
     if progress.iscanceled():
-        if os.path.exists(dst_path):
-            os.remove(dst_path)
-            
+        remove_file(dst_path)            
         return False
 
-    #md5 check?
+    checksum = md5sum(dst_path)
+    if checksum != md5:
+        remove_file(dst_path)
+        raise InputStreamError(_(_.MD5_MISMATCH, filename=filename, local_md5=checksum, remote_md5=md5))
     
     return True

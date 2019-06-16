@@ -134,8 +134,7 @@ msgid "Could not find a url for function: {function_name}"
 msgstr ""
 
 msgctxt "#32008"
-msgid "Inpustream Adaptive add-on required for Widevine playback\n"
-"Use the Kodi installer from the Kodi website instead"
+msgid "Inpustream Adaptive add-on required for Widevine playback"
 msgstr ""
 
 msgctxt "#32009"
@@ -188,7 +187,7 @@ msgid "Clear Data"
 msgstr ""
 
 msgctxt "#32020"
-msgid "Error"
+msgid "{addon} - Error"
 msgstr ""
 
 msgctxt "#32021"
@@ -238,7 +237,7 @@ msgid "No Results"
 msgstr ""
 
 msgctxt "#32032"
-msgid "Unexpected Error :("
+msgid "{addon} - Unexpected Error"
 msgstr ""
 
 msgctxt "#32033"
@@ -268,4 +267,41 @@ msgstr ""
 
 msgctxt "#32039"
 msgid "Service Start Delay (0 = Random 10s-60s)"
+msgstr ""
+
+msgctxt "#32040"
+msgid "MD5 checksum failed for file: {filename}\n"
+"{local_md5} != {remote_md5}"
+msgstr ""
+
+msgctxt "#32041"
+msgid "No Items"
+msgstr ""
+
+msgctxt "#32042"
+msgid "Set Inputstream Quality"
+msgstr ""
+
+msgctxt "#32043"
+msgid "Max"
+msgstr ""
+
+msgctxt "#32044"
+msgid "{bandwidth} MiB/s (1080p)"
+msgstr ""
+
+msgctxt "#32045"
+msgid "{bandwidth} MiB/s (720p)"
+msgstr ""
+
+msgctxt "#32046"
+msgid "{bandwidth} MiB/s (480p)"
+msgstr ""
+
+msgctxt "#32047"
+msgid "Quality set: {bandwidth} MiB/s"
+msgstr ""
+
+msgctxt "#32048"
+msgid "{bandwidth} MiB/s (540p)"
 msgstr ""
