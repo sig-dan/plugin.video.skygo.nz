@@ -1,7 +1,6 @@
 import os
 import time
 import hashlib
-from datetime import datetime
 
 import xbmc
 
@@ -11,8 +10,13 @@ from .log import log
 from .exceptions import Error 
 
 def remove_file(file_path):
-    if os.path.exists(file_path):
-        os.remove(file_path)
+    try:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+    except:
+        return False
+    else:
+        return True
 
 def hash_6(value, default=None):
     if not value:
@@ -32,12 +36,6 @@ def get_kodi_version():
         return int(xbmc.getInfoLabel("System.BuildVersion").split('.')[0])
     except:
         return 0
-
-def strptime(date, str_format):
-    try:
-        return datetime.strptime(date, str_format)
-    except TypeError:
-        return datetime(*(time.strptime(date, str_format)[0:6]))
 
 def process_brightcove(data):
     try:

@@ -44,9 +44,9 @@ def live_tv(**kwargs):
 
         folder.add_item(
             label    = channel['title'],
-            art      = {'thumb': channel['image']},
+            art      = {'thumb': channel.get('image')},
             path     = plugin.url_for(play_channel, channel=channel['title'], _is_live=True),
-            info     = {'description': channel['description']},
+            info     = {'description': channel.get('description')},
             playable = True,
             context  = ((_.HIDE_CHANNEL, 'XBMC.RunPlugin({})'.format(plugin.url_for(hide_channel, channel=channel['title']))),)
         )
@@ -103,7 +103,7 @@ def movies(**kwargs):
         folder.add_item(
             label = row['title'],
             info = {
-                'plot': row['synopsis'],
+                'plot': row.get('synopsis'),
                 'duration': int(row.get('duration', '0 mins').strip(' mins')) * 60,
                 'mediatype': 'movie',
             },

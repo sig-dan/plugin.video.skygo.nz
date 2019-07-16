@@ -79,6 +79,7 @@ class BaseLanguage(object):
     IA_QUALITY_480P             = 32046
     IA_QUALITY_SET              = 32047
     IA_QUALITY_540P             = 32048
+    NO_AUTOPLAY_FOUND           = 32049
 
     def __getattribute__(self, name):
         attr = object.__getattribute__(self, name)

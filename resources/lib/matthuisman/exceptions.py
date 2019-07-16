@@ -1,4 +1,7 @@
 
+class Exit(Exception):
+    pass
+
 class Error(Exception):
     def __init__(self, message, heading=None):
         super(Error, self).__init__(message)

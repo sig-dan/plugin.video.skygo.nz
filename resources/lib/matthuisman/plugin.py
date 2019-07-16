@@ -1,11 +1,13 @@
 import sys
+import re
+import shutil
 
 from functools import wraps
 
 import xbmc, xbmcplugin
 
 from . import router, gui, settings, userdata, inputstream, signals
-from .constants import ROUTE_SETTINGS, ROUTE_RESET, ROUTE_SERVICE, ROUTE_CLEAR_CACHE, ROUTE_IA_SETTINGS, ROUTE_IA_INSTALL, ROUTE_IA_QUALITY, ADDON_ICON, ADDON_FANART, ADDON_ID, ADDON_NAME
+from .constants import ROUTE_SETTINGS, ROUTE_RESET, ROUTE_SERVICE, ROUTE_CLEAR_CACHE, ROUTE_IA_SETTINGS, ROUTE_IA_INSTALL, ROUTE_IA_QUALITY, ADDON_ICON, ADDON_FANART, ADDON_ID, ADDON_NAME, ROUTE_AUTOPLAY_TAG, ADDON_PROFILE
 from .log import log
 from .language import _
 from .exceptions import PluginError
@@ -39,9 +41,13 @@ def route(url=None):
         def decorated_function(*args, **kwargs):
             item = f(*args, **kwargs)
 
-            if isinstance(item, Folder):
+            pattern = kwargs.get(ROUTE_AUTOPLAY_TAG, '')
+
+            if pattern and isinstance(item, Folder):
+                _autoplay(item, pattern)
+            elif isinstance(item, Folder):
                 item.display()
-            elif isinstance(item, Item):
+            elif isinstance(item, Item):                    
                 item.play()
             else:
                 resolve()
@@ -59,9 +65,9 @@ def merge():
 
             try:
                 result = f(*args, **kwargs)
-            except:
+            except Exception as e:
                 xbmc.executebuiltin('Skin.SetString(merge,error)')
-                raise
+                log.exception(e)
             else:
                 xbmc.executebuiltin('Skin.SetString(merge,ok)')
                 return result
@@ -133,9 +139,17 @@ def _reset(**kwargs):
     if not gui.yes_no(_.PLUGIN_RESET_YES_NO):
         return
 
+    xbmc.executeJSONRPC('{{"jsonrpc":"2.0","id":1,"method":"Addons.SetAddonEnabled","params":{{"addonid":"{}","enabled":false}}}}'.format(ADDON_ID))
+
+    _close()
     userdata.clear()
+    shutil.rmtree(ADDON_PROFILE)
+
+    xbmc.executeJSONRPC('{{"jsonrpc":"2.0","id":1,"method":"Addons.SetAddonEnabled","params":{{"addonid":"{}","enabled":true}}}}'.format(ADDON_ID))
+
     gui.notification(_.PLUGIN_RESET_OK)
     signals.emit(signals.AFTER_RESET)
+    gui.refresh()
 
 @route(ROUTE_SERVICE)
 def _service(**kwargs):
@@ -150,6 +164,28 @@ def _handle():
         return int(sys.argv[1])
     except:
         return -1
+
+def _autoplay(folder, pattern):
+    if '#' in pattern:
+        pattern, count = pattern.split('#')
+        num = int(count)
+    else:
+        num = 1
+
+    log.debug('Auto playing #{} list item that matches: {}'.format(num, pattern))
+
+    count = 0
+    for item in folder.items:
+        if not item or not item.label or not item.playable:
+            continue
+
+        if re.search(pattern, item.label, re.IGNORECASE):
+            count += 1
+            log.debug('#{} Match: {}'.format(count, item.label))
+            if count == num:
+                router.redirect(item.path)
+
+    raise PluginError(_(_.NO_AUTOPLAY_FOUND, pattern=pattern))
 
 #Plugin.Item()
 class Item(gui.Item):
@@ -188,8 +224,8 @@ class Folder(object):
 
     def display(self):
         handle = _handle()
+        items  = [i for i in self.items if i]
 
-        items = [i for i in self.items if i]
         if not items and self.no_items_label:
             items.append(Item(
                 label = _(self.no_items_label, _label=True), 
@@ -212,8 +248,15 @@ class Folder(object):
         xbmcplugin.endOfDirectory(handle, succeeded=True, updateListing=self.updateListing, cacheToDisc=self.cacheToDisc)
 
     def add_item(self, *args, **kwargs):
+        position = kwargs.pop('_position', None)
+        
         item = Item(*args, **kwargs)
-        self.items.append(item)
+        
+        if position == None:
+            self.items.append(item)
+        else:
+            self.items.insert(int(position), item)
+
         return item
 
     def add_items(self, items):

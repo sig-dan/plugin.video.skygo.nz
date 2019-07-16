@@ -1,3 +1,4 @@
+
 import os
 
 import xbmc, xbmcaddon
@@ -53,6 +54,7 @@ ROUTE_LIVE_TAG         = '_l'
 ROUTE_LIVE_SUFFIX      = '.pvr'
 ROUTE_URL_TAG          = '_url'
 FORCE_RUN_FLAG         = '_force_run'
+ROUTE_AUTOPLAY_TAG     = '_autoplay'
 #################
 
 #### INPUTSTREAM ADAPTIVE #####

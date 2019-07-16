@@ -305,3 +305,7 @@ msgstr ""
 msgctxt "#32048"
 msgid "{bandwidth} MiB/s (540p)"
 msgstr ""
+
+msgctxt "#32049"
+msgid "No list item found that matches pattern: {pattern}"
+msgstr ""

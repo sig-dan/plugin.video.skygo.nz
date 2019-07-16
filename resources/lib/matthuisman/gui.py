@@ -65,6 +65,9 @@ def input(message, default='', hide_input=False, **kwargs):
         
     return xbmcgui.Dialog().input(message, default, **kwargs)
 
+def numeric(message, default='', type=0, **kwargs):
+    return xbmcgui.Dialog().numeric(type, message, defaultt=str(default), **kwargs)
+
 def ok(message, heading=None):
     heading = _make_heading(heading)
 
