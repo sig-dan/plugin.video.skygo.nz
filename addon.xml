@@ -8,7 +8,9 @@
     <provides>video</provides>
   </extension>
   <extension point="xbmc.addon.metadata">
-    <description lang="en">Watch live channels from SKY GO (New Zealand). Subscription required.</description>
+    <description lang="en">Watch live channels from SKY GO (New Zealand). 
+
+Subscription required.</description>
     <reuselanguageinvoker>true</reuselanguageinvoker>
     <license></license>
     <language/>

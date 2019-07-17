@@ -1,9 +1,11 @@
-from matthuisman import plugin, gui, userdata, signals, inputstream
+import xbmcplugin
+
+from matthuisman import plugin, gui, userdata, signals, inputstream, settings
 from matthuisman.exceptions import Error
 from matthuisman.constants import ADDON_ID
 
 from .api import API
-from .constants import IMAGE_URL, PASSWORD_KEY, HEADERS
+from .constants import IMAGE_URL, HEADERS
 from .language import _
 
 api = API()
@@ -21,10 +23,11 @@ def home(**kwargs):
         folder.add_item(label=_(_.LOGIN, _bold=True), path=plugin.url_for(login))
     else:
         folder.add_item(label=_(_.LIVE_TV, _bold=True),  path=plugin.url_for(live_tv))
-        folder.add_item(label=_(_.TV_SHOWS, _bold=True), path=plugin.url_for(tv_shows))
-        folder.add_item(label=_(_.MOVIES, _bold=True),   path=plugin.url_for(movies))
-        folder.add_item(label=_(_.SPORTS, _bold=True),   path=plugin.url_for(sports))
-        folder.add_item(label=_(_.BOX_SETS, _bold=True), path=plugin.url_for(box_sets))
+        folder.add_item(label=_(_.TV_SHOWS, _bold=True), path=plugin.url_for(content, title=_.TV_SHOWS, section='tvshows'))
+        folder.add_item(label=_(_.MOVIES, _bold=True),   path=plugin.url_for(content, title=_.MOVIES, section='movies'))
+        folder.add_item(label=_(_.SPORTS, _bold=True),   path=plugin.url_for(content, title=_.SPORTS, section='sport'))
+        folder.add_item(label=_(_.BOX_SETS, _bold=True), path=plugin.url_for(content, title=_.BOX_SETS, section='boxsets'))
+        folder.add_item(label=_(_.SEARCH, _bold=True),   path=plugin.url_for(search))
 
         folder.add_item(label=_.LOGOUT, path=plugin.url_for(logout))
 
@@ -36,115 +39,170 @@ def home(**kwargs):
 def live_tv(**kwargs):
     folder = plugin.Folder(title=_.LIVE_TV)
 
-    hidden = userdata.get('hidden', [])
+    subscriptions = userdata.get('subscriptions', [])
 
-    for channel in api.channels().values():
-        if channel['title'] in hidden:
+    rows = api.channels()
+
+    def _is_subscribed(categories):
+        if not subscriptions or not categories:
+            return True
+
+        for row in categories:
+            if row['media$scheme'] == 'urn:sky:subscription' and row['media$name'] not in subscriptions:
+                return False
+
+        return True
+
+    def _get_image(images):
+        if not images:
+            return None
+
+        for row in images:
+            if 'SkyGoChannelLogoScroll' in row['plfile$assetTypes']:
+                return row['plfile$streamingUrl']
+
+        return images[-1]['plfile$streamingUrl']
+
+    def _get_play_url(content):
+        for row in content:
+            if 'SkyGoStream' in row['plfile$assetTypes']:
+                return row['plfile$streamingUrl']
+
+        return None
+
+    for row in sorted(rows, key=lambda r: float(r.get('sky$liveChannelOrder', 'inf'))):
+        if 'Live' not in row.get('sky$channelType', []):
+            continue
+
+        channel_id = row['plmedia$publicUrl'].rsplit('/')[-1]
+
+        label = row['title']
+
+        subscribed = _is_subscribed(row.get('media$categories'))
+        play_url   = _get_play_url(row.get('media$content'))
+
+        if not subscribed:
+            label = _(_.LOCKED, label=label)
+        elif 'faxs' in play_url:
+            label = _(_.ADOBE_DRM, label=label)
+
+        if settings.getBool('hide_unplayable', False) and (not subscribed or 'faxs' in play_url):
             continue
 
         folder.add_item(
-            label    = channel['title'],
-            art      = {'thumb': channel.get('image')},
-            path     = plugin.url_for(play_channel, channel=channel['title'], _is_live=True),
-            info     = {'description': channel.get('description')},
+            label    = label,
+            info     = {'description': row.get('description')},
+            art      = {'thumb': _get_image(row.get('media$thumbnails'))},
+            path     = plugin.url_for(play_channel, id=channel_id, _is_live=True),
             playable = True,
-            context  = ((_.HIDE_CHANNEL, 'XBMC.RunPlugin({})'.format(plugin.url_for(hide_channel, channel=channel['title']))),)
         )
 
     return folder
 
 @plugin.route()
-def tv_shows(**kwargs):
-    folder = plugin.Folder(title=_.TV_SHOWS)
-    folder.add_items(_shows('tvshows'))
+def content(title, section, start=0, **kwargs):
+    start = int(start)
+    folder = plugin.Folder(title=title)
+
+    data   = api.content(section, start=start)
+    items = _process_content(data['data'])
+    folder.add_items(items)
+
+    if data['index'] < data['available']:
+        folder.add_item(
+            label = _(_.NEXT_PAGE, _bold=True),
+            path  = plugin.url_for(content, title=title, section=section, start=data['index']),
+        )
+
     return folder
 
 @plugin.route()
-def sports(**kwargs):
-    folder = plugin.Folder(title=_.SPORTS)
-    folder.add_items(_shows('sport'))
+def search(query=None, start=0, **kwargs):
+    start = int(start)
+
+    if not query:
+        query = gui.input(_.SEARCH, default=userdata.get('search', '')).strip()
+        if not query:
+            return
+
+        userdata.set('search', query)
+
+    folder = plugin.Folder(title=_(_.SEARCH_FOR, query=query))
+
+    data = api.content(text=query, start=start)
+    items = _process_content(data['data'])
+    folder.add_items(items)
+
+    if data['index'] < data['available']:
+        folder.add_item(
+            label = _(_.NEXT_PAGE, _bold=True),
+            path  = plugin.url_for(search, query=query, start=data['index']),
+        )
+
     return folder
 
-@plugin.route()
-def box_sets(**kwargs):
-    folder = plugin.Folder(title=_.BOX_SETS)
-    folder.add_items(_shows('boxsets'))
-    return folder
-
-def _shows(section):
+def _process_content(rows):
     items = []
+    subscriptions = userdata.get('subscriptions', [])
 
-    for row in api.content().values():
-        if row['section'] != section or row['suspended']:
+    for row in rows:
+        if row['suspended']:
             continue
 
-        item = plugin.Item(
-            label = row['title'],
-            info  = {
-                'tvshowtitle': row.get('seriesTitle', row['title']),
-                'mediatype': 'tvshow',
-            },
-            art   = {'thumb': IMAGE_URL.format(row['images'].get('MP',''))},
-            path  = plugin.url_for(show, show_id=row['id']),
-        )
+        label = row['title']
 
-        items.append(item)
+        if 'subCode' in row and subscriptions and row['subCode'] not in subscriptions:
+            label = _(_.LOCKED, label=label)
+
+            if settings.getBool('hide_unplayable', False):
+                continue
+
+        if row['type'] == 'movie':
+            items.append(plugin.Item(
+                label = label,
+                info = {
+                    'plot': row.get('synopsis'),
+                    'duration': int(row.get('duration', '0 mins').strip(' mins')) * 60,
+                    'mediatype': 'movie',
+                },
+                art  = {'thumb': IMAGE_URL.format(row['images'].get('MP',''))},
+                path = plugin.url_for(play, id=row['mediaId']),
+                playable = True,
+            ))
+
+        elif row['type'] == 'season':
+            items.append(plugin.Item(
+                label = label,
+                art   = {'thumb': IMAGE_URL.format(row['images'].get('MP',''))},
+                path  = plugin.url_for(series, id=row['id']),
+            ))
 
     return items
 
 @plugin.route()
-def movies(**kwargs):
-    folder = plugin.Folder(title=_.MOVIES)
-    
-    for row in api.content().values():
-        if row['section'] != 'movies' or row['suspended']:
-            continue
+def series(id, **kwargs):
+    data   = api.series(id)
 
+    folder = plugin.Folder(title=data['title'], fanart=IMAGE_URL.format(data['images'].get('PS','')), sort_methods=[xbmcplugin.SORT_METHOD_EPISODE, xbmcplugin.SORT_METHOD_UNSORTED, xbmcplugin.SORT_METHOD_LABEL, xbmcplugin.SORT_METHOD_DATEADDED])
+
+    for row in data.get('subContent', []):
         folder.add_item(
-            label = row['title'],
-            info = {
-                'plot': row.get('synopsis'),
-                'duration': int(row.get('duration', '0 mins').strip(' mins')) * 60,
-                'mediatype': 'movie',
-            },
-            art  = {'thumb': IMAGE_URL.format(row['images'].get('MP',''))},
-            path = plugin.url_for(play, media_id=row['mediaId']),
-            playable = True,
-        )
-
-    return folder
-
-@plugin.route()
-def show(show_id, **kwargs):
-    show   = api.content()[show_id]
-    folder = plugin.Folder(title=show['title'])
-    
-    for row in sorted(show.get('subContent', []), key=lambda x: x.get('episodeNumber', x['episodeTitle'])):
-        if row['suspended']:
-            continue
-
-        folder.add_item(
-            label = _(_.EPISODE_LABEL, title=row['episodeTitle'], episode=row.get('episodeNumber')),
+            label = row['episodeTitle'],
             info  = {
-                'tvshowtitle': show.get('seriesTitle', show['title']),
+                'tvshowtitle': data.get('seriesTitle', data['title']),
                 'plot': row.get('episodeSynopsis'),
                 'duration': int(row.get('duration', '0 mins').strip(' mins')) * 60,
                 'season': int(row.get('seasonNumber', 0)),
                 'episode': int(row.get('episodeNumber', 0)),
                 'mediatype': 'episode',
             },
-            art   = {'thumb': IMAGE_URL.format(show['images'].get('MP',''))},
-            path  = plugin.url_for(play, media_id=row['mediaId']),
+            art   = {'thumb': IMAGE_URL.format(data['images'].get('MP',''))},
+            path  = plugin.url_for(play, id=row['mediaId']),
             playable = True,
         )
 
     return folder
-
-@plugin.route()
-def reset_hidden(**kwargs):
-    userdata.delete('hidden')
-    gui.notification(_.RESET_HIDDEN_OK)
-
+    
 @plugin.route()
 def login(**kwargs):
     username = gui.input(_.ASK_USERNAME, default=userdata.get('username', '')).strip()
@@ -158,10 +216,6 @@ def login(**kwargs):
         return
 
     api.login(username=username, password=password)
-
-    if gui.yes_no(_.STORE_PASSWORD, heading=_.STORE_PASSWORD_HEADING):
-        userdata.set(PASSWORD_KEY, password)
-
     gui.refresh()
 
 @plugin.route()
@@ -173,21 +227,28 @@ def logout(**kwargs):
     gui.refresh()
 
 @plugin.route()
-def hide_channel(channel, **kwargs):
-    hidden = userdata.get('hidden', [])
+@plugin.login_required()
+def play(id, **kwargs):
+    url, license = api.play_media(id)
 
-    if channel not in hidden:
-        hidden.append(channel)
-
-    userdata.set('hidden', hidden)
-    gui.refresh()
+    return plugin.Item(
+        path        = url,
+        headers     = HEADERS,
+        inputstream = inputstream.Widevine(
+            license_key  = license,
+            challenge    = '',
+            content_type = '',
+            response     = 'JBlicense',
+        ),
+    )
 
 @plugin.route()
 @plugin.login_required()
-def play(media_id, **kwargs):
-    return api.play_media(media_id)
+def play_channel(id, **kwargs):
+    url = api.play_channel(id)
 
-@plugin.route()
-@plugin.login_required()
-def play_channel(channel, **kwargs):
-    return api.play_channel(channel)
+    return plugin.Item(
+        path        = url,
+        headers     = HEADERS,
+        inputstream = inputstream.HLS(),
+    )

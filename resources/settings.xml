@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <settings>
     <category label="32034">
-        <setting label="30008" type="action" action="RunPlugin(plugin://$ID/?_=reset_hidden)"/>
+        <setting label="30018" type="bool" id="hide_unplayable" default="false"/>
+        <setting label="30017" type="bool" id="save_password" default="false"/>
     </category>
 
-    <!-- Playback -->
     <category label="32035">
         <setting label="32023" type="bool" id="use_ia_hls" default="true"/>
         <setting label="32042" type="action" action="RunPlugin(plugin://$ID/?_=_ia_quality)" />
@@ -12,7 +12,6 @@
         <setting label="32021" type="action" action="RunPlugin(plugin://$ID/?_=_ia_install)"/>
     </category>
 
-    <!-- Advanced -->
     <category label="32036">
         <setting label="32037" id="verify_ssl" type="bool" default="true"/>
         <setting label="32039" id="service_delay" type="number" default="0"/>

@@ -7,12 +7,13 @@ HEADERS = {
 }
 
 DEVICE_IP    = '192.168.1.1'
-CHANNELS_URL = 'https://feed.theplatform.com/f/7tMqSC/PDBWHrmbpxqw?form=json&validFeed=true&omitInvalidFields=true&fields=content,title,description,thumbnails'
+CHANNELS_URL = 'https://feed.theplatform.com/f/7tMqSC/O5wnnwnQqDWV?form=json'
 AUTH_URL     = 'https://4azub3wqb8.execute-api.ap-southeast-2.amazonaws.com/prod/auth/skygo/token/v1/authenticate/'
 TOKEN_URL    = 'https://6cwj6qmdoa.execute-api.ap-southeast-2.amazonaws.com/prod/v1/token/mpx/'
 RENEW_URL    = 'https://4azub3wqb8.execute-api.ap-southeast-2.amazonaws.com/prod/auth/skygo/token/v1/renew'
-CONTENT_URL  = 'https://d3207bvak4txrg.cloudfront.net/v1/content'
+CONTENT_URL  = 'https://www.skygo.co.nz/pub-api/content/v1/'
 IMAGE_URL    = 'https://prod-images.skygo.co.nz/{}'
 PLAY_URL     = 'https://feed.theplatform.com/f/7tMqSC/T2XJ65T_soBz'
+PLAY_CHANNEL_URL  = 'https://link.theplatform.com/s/7tMqSC/media/{id}?feed=SkyGo&auth={auth}'
+SUBSCRIPTIONS_URL = 'https://z4a6uom8wa.execute-api.ap-southeast-2.amazonaws.com/prod/v2/onlineSubscriptions/?profileId={}'
 WIDEVINE_URL = 'https://widevine.entitlement.theplatform.com/wv/web/ModularDrm/getWidevineLicense?schema=1.0&token={token}&form=json&account=http://access.auth.theplatform.com/data/Account/2682481291&_releasePid={pid}&_widevineChallenge={challenge}'
-PASSWORD_KEY = 'Z03Px'

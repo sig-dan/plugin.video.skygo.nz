@@ -17,7 +17,7 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 msgctxt "#30000"
-msgid "Hide Channel"
+msgid ""
 msgstr ""
 
 msgctxt "#30001"
@@ -38,8 +38,7 @@ msgid "Failed to login.\n"
 msgstr ""
 
 msgctxt "#30005"
-msgid "This stream is protected by Adobe Access DRM and can not be played in KODI.\n"
-"You can hide this channel via the context menu."
+msgid "This stream is protected by Adobe Access DRM and can not be played in KODI"
 msgstr ""
 
 msgctxt "#30006"
@@ -52,11 +51,11 @@ msgid "Live TV"
 msgstr ""
 
 msgctxt "#30008"
-msgid "Reset Hidden Channels"
+msgid ""
 msgstr ""
 
 msgctxt "#30009"
-msgid "Hidden Channels Reset"
+msgid ""
 msgstr ""
 
 msgctxt "#30010"
@@ -91,12 +90,23 @@ msgid "Failed to renew your session token.\n"
 msgstr ""
 
 msgctxt "#30017"
-msgid "Save your password?"
+msgid "Save Password"
 msgstr ""
 
 msgctxt "#30018"
-msgid "A login token will only work if used on a single device.\n"
-"Select Yes if using this addon on multiple devices."
+msgid "Hide Unplayable Content"
+msgstr ""
+
+msgctxt "#30019"
+msgid "{label} [COLOR red](LOCKED)[/COLOR]"
+msgstr ""
+
+msgctxt "#30020"
+msgid "{label} [COLOR red](ADOBE DRM)[/COLOR]"
+msgstr ""
+
+msgctxt "#30021"
+msgid "Next Page"
 msgstr ""
 
 ##COMMON##
