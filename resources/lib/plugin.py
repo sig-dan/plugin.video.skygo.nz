@@ -268,3 +268,72 @@ def play_channel(id, **kwargs):
         headers     = HEADERS,
         inputstream = inputstream.HLS(),
     )
+
+@plugin.route()
+@plugin.merge()
+def playlist(output, **kwargs):
+    # data = api.live_channels()
+
+    # genres = {}
+    # for genre in data['genres']['items'][1:]: #skip first "All channels" genre
+    #     channels = api.live_channels(_filter=genre['data'])['liveChannel']
+    #     for channel in channels:
+    #         genres[channel['channelCode']] = genre['title']
+
+    # entitlements = _get_entitlements()
+
+    with io.open(output, 'w', encoding='utf-8') as f:
+        f.write(u'#EXTM3U\n')
+
+        # for elem in sorted(data['liveChannel'], key=lambda e: e['order']):
+        #     elem['locked'] = entitlements and elem['channelCode'] not in entitlements
+
+        #     if elem['locked'] and settings.getBool('hide_locked'):
+        #         continue
+
+        #     label = elem['title']
+        #     if elem['locked']:
+        #         label = _(_.LOCKED, label=label)
+
+        #     f.write(u'#EXTINF:-1 tvg-id="{id}" tvg-chno="{channel}" channel-id="{channel}" group-title="{group}" tvg-name="{name}" tvg-logo="{logo}",{name}\n{path}\n'.format(
+        #         id=elem['channelCode'], channel=elem['channelId'], logo=_image('{id}:{site_id}:CHANNEL:IMAGE'.format(id=elem['id'], site_id=LIVE_SITEID)), 
+        #         name=label, group=genres.get(elem['channelCode'], ''), path=plugin.url_for(play, media_type=TYPE_LIVE, id=elem['id'], _is_live=True)))
+
+@plugin.route()
+@plugin.merge()
+def epg(output, **kwargs):
+    # channel_codes = []
+    # entitlements = _get_entitlements()
+
+    # for elem in api.live_channels()['liveChannel']:
+    #     if entitlements and elem['channelCode'] not in entitlements and settings.getBool('hide_locked'):
+    #         continue
+    #     else:
+    #         channel_codes.append(elem['channelCode'])
+
+    # added = []
+    # now = arrow.utcnow().shift(hours=-2)
+
+    with io.open(output, 'w', encoding='utf-8') as f:
+        f.write(u'<?xml version="1.0" encoding="utf-8" ?><tv>')
+
+        # for i in range(EPG_DAYS):
+        #     for row in api.epg(channel_codes, starttime=now.shift(days=i)):
+        #         channel = row['SourceChannel']
+        #         events  = row['ChannelSchedule']['EventList']
+
+        #         if channel['ChannelTag'] not in added:
+        #             f.write(u'<channel id="{}"><display-name>{}</display-name></channel>'.format(channel['ChannelTag'], escape(channel['ChannelName'])))
+        #             added.append(channel['ChannelTag'])
+
+        #         for event in events:
+        #             if event.get('SeriesNumber') and event.get('EpisodeNumber'):
+        #                 ep_num = '<episode-num system="onscreen">S{}E{}</episode-num>'.format(event['SeriesNumber'], event['EpisodeNumber'])
+        #             else:
+        #                 ep_num = ''
+
+        #             f.write(u'<programme channel="{}" start="{}" stop="{}"><title>{}</title><desc>{}</desc><category>{}</category><sub-title>{}</sub-title>{}</programme>'.format(
+        #                 channel['ChannelTag'], arrow.get(event['StartTimeUTC']).format('YYYYMMDDHHmmss Z'), arrow.get(event['EndTimeUTC']).format('YYYYMMDDHHmmss Z'), escape(event['EventTitle']),
+        #                 escape(event.get('MergedShortSynopsis', event['ShortSynopsis'])), escape(event['Genre']), escape(event['EpisodeTitle']), ep_num))
+
+        f.write(u'</tv>')
