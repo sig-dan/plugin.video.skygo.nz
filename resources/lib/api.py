@@ -30,13 +30,14 @@ class API(object):
     def series(self, id):
         return self._session.get(CONTENT_URL + id).json()
 
-    def content(self, section='', sortby='TITLE', text='', start=0):
+    def content(self, section='', sortby='TITLE', text='', title=None, start=0):
         params = {
-            'title': '',
+            'title': title or '',
             'genre': '',
             'rating': '',
             'text': text,
             'sortBy': sortby,
+            'lastChance': 'true' if sortby == 'LASTCHANCE' else 'false',
             'type': '',
             'section': section,
             'size': 100,
@@ -137,22 +138,15 @@ class API(object):
                 chosen = video
                 break
  
-        url = '{}&auth={}&formats=mpeg-dash&tracking=true'.format(chosen['plfile$url'], token)
-        resp = self._session.get(url, allow_redirects=False)
-
-        if resp.status_code != 302:
-            data = resp.json()
-            raise APIError(_(_.PLAY_ERROR, message=data.get('description')))
-
-        url     = resp.headers.get('location')
+        url     = '{}&auth={}&formats=mpeg-dash&tracking=true'.format(chosen['plfile$url'], token)
         pid     = chosen['plfile$url'].split('?')[0].split('/')[-1]
         license = WIDEVINE_URL.format(token=token, pid=pid, challenge='B{SSM}')
 
+        url = self._get_location(url)
+
         return url, license
 
-    def play_channel(self, id):
-        token = self._get_play_token()
-        url = PLAY_CHANNEL_URL.format(id=id, auth=token)
+    def _get_location(self, url):
         resp = self._session.get(url, allow_redirects=False)
 
         if resp.status_code != 302:
@@ -160,9 +154,16 @@ class API(object):
             raise APIError(_(_.PLAY_ERROR, message=data.get('description')))
 
         url = resp.headers.get('location')
-
         if 'faxs' in url:
             raise APIError(_.ADOBE_ERROR)
+
+        return url
+
+    def play_channel(self, id):
+        token = self._get_play_token()
+        url = PLAY_CHANNEL_URL.format(id=id, auth=token)
+
+        url = self._get_location(url)
 
         return url
 

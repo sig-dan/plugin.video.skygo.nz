@@ -1,3 +1,5 @@
+from string import ascii_uppercase
+
 import xbmcplugin
 
 from matthuisman import plugin, gui, userdata, signals, inputstream, settings
@@ -23,10 +25,10 @@ def home(**kwargs):
         folder.add_item(label=_(_.LOGIN, _bold=True), path=plugin.url_for(login))
     else:
         folder.add_item(label=_(_.LIVE_TV, _bold=True),  path=plugin.url_for(live_tv))
-        folder.add_item(label=_(_.TV_SHOWS, _bold=True), path=plugin.url_for(content, title=_.TV_SHOWS, section='tvshows'))
-        folder.add_item(label=_(_.MOVIES, _bold=True),   path=plugin.url_for(content, title=_.MOVIES, section='movies'))
-        folder.add_item(label=_(_.SPORTS, _bold=True),   path=plugin.url_for(content, title=_.SPORTS, section='sport'))
-        folder.add_item(label=_(_.BOX_SETS, _bold=True), path=plugin.url_for(content, title=_.BOX_SETS, section='boxsets'))
+        folder.add_item(label=_(_.TV_SHOWS, _bold=True), path=plugin.url_for(content, label=_.TV_SHOWS, section='tvshows'))
+        folder.add_item(label=_(_.MOVIES, _bold=True),   path=plugin.url_for(content, label=_.MOVIES, section='movies'))
+        folder.add_item(label=_(_.SPORTS, _bold=True),   path=plugin.url_for(content, label=_.SPORTS, section='sport'))
+        folder.add_item(label=_(_.BOX_SETS, _bold=True), path=plugin.url_for(content, label=_.BOX_SETS, section='boxsets'))
         folder.add_item(label=_(_.SEARCH, _bold=True),   path=plugin.url_for(search))
 
         folder.add_item(label=_.LOGOUT, path=plugin.url_for(logout))
@@ -100,19 +102,33 @@ def live_tv(**kwargs):
     return folder
 
 @plugin.route()
-def content(title, section, start=0, **kwargs):
+def content(label, section, sortby=None, title=None, start=0, **kwargs):
     start = int(start)
-    folder = plugin.Folder(title=title)
+    folder = plugin.Folder(title=label)
 
-    data   = api.content(section, start=start)
-    items = _process_content(data['data'])
-    folder.add_items(items)
+    if not sortby:
+        items = [[_.A_Z, 'TITLE'], [_.LATEST, 'LATEST'], [_.LAST_CHANCE, 'LASTCHANCE']]
+        for item in items:
+            folder.add_item(label=item[0], path=plugin.url_for(content, label=item[0], section=section, sortby=item[1]))
 
-    if data['index'] < data['available']:
-        folder.add_item(
-            label = _(_.NEXT_PAGE, _bold=True),
-            path  = plugin.url_for(content, title=title, section=section, start=data['index']),
-        )
+    elif sortby == 'TITLE' and title == None:
+        items = [[c, c] for c in ascii_uppercase]
+        items.insert(0, [_.ALL, ''])
+        items.append([_.ZERO_9, '0-9'])
+        
+        for item in items:
+            folder.add_item(label=item[0], path=plugin.url_for(content, label=item[0], section=section, sortby=sortby, title=item[1]))
+
+    else:
+        data   = api.content(section, sortby=sortby, title=title, start=start)
+        items = _process_content(data['data'])
+        folder.add_items(items)
+
+        if data['index'] < data['available']:
+            folder.add_item(
+                label = _(_.NEXT_PAGE, _bold=True),
+                path  = plugin.url_for(content, label=label, section=section, sortby=sortby, title=title, start=data['index']),
+            )
 
     return folder
 

@@ -17,7 +17,7 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 msgctxt "#30000"
-msgid ""
+msgid "Latest"
 msgstr ""
 
 msgctxt "#30001"
@@ -51,11 +51,11 @@ msgid "Live TV"
 msgstr ""
 
 msgctxt "#30008"
-msgid ""
+msgid "A-Z"
 msgstr ""
 
 msgctxt "#30009"
-msgid ""
+msgid "Last Chance"
 msgstr ""
 
 msgctxt "#30010"
@@ -107,6 +107,14 @@ msgstr ""
 
 msgctxt "#30021"
 msgid "Next Page"
+msgstr ""
+
+msgctxt "#30022"
+msgid "All"
+msgstr ""
+
+msgctxt "#30023"
+msgid "0-9"
 msgstr ""
 
 ##COMMON##
