@@ -1,5 +1,9 @@
+import io
 from string import ascii_uppercase
 
+from xml.sax.saxutils import escape
+
+import arrow
 import xbmcplugin
 
 from matthuisman import plugin, gui, userdata, signals, inputstream, settings
@@ -7,7 +11,7 @@ from matthuisman.exceptions import Error
 from matthuisman.constants import ADDON_ID
 
 from .api import API
-from .constants import IMAGE_URL, HEADERS
+from .constants import IMAGE_URL, HEADERS, EPG_DAYS
 from .language import _
 
 api = API()
@@ -37,12 +41,9 @@ def home(**kwargs):
 
     return folder
 
-@plugin.route()
-def live_tv(**kwargs):
-    folder = plugin.Folder(title=_.LIVE_TV)
-
+def _get_channels():
     subscriptions = userdata.get('subscriptions', [])
-
+    channels = []
     rows = api.channels()
 
     def _is_subscribed(categories):
@@ -91,11 +92,26 @@ def live_tv(**kwargs):
         if settings.getBool('hide_unplayable', False) and (not subscribed or 'faxs' in play_url):
             continue
 
+        channels.append({
+            'label': label,
+            'channel': row.get('sky$skyGOChannelID', ''),
+            'description': row.get('description'),
+            'image': _get_image(row.get('media$thumbnails')),
+            'path':  plugin.url_for(play_channel, id=channel_id, _is_live=True),
+        })
+
+    return channels
+
+@plugin.route()
+def live_tv(**kwargs):
+    folder = plugin.Folder(title=_.LIVE_TV)
+
+    for row in _get_channels():
         folder.add_item(
-            label    = label,
-            info     = {'description': row.get('description')},
-            art      = {'thumb': _get_image(row.get('media$thumbnails'))},
-            path     = plugin.url_for(play_channel, id=channel_id, _is_live=True),
+            label    = row['label'],
+            info     = {'description': row['description']},
+            art      = {'thumb': row['image']},
+            path     = row['path'],
             playable = True,
         )
 
@@ -272,68 +288,37 @@ def play_channel(id, **kwargs):
 @plugin.route()
 @plugin.merge()
 def playlist(output, **kwargs):
-    # data = api.live_channels()
-
-    # genres = {}
-    # for genre in data['genres']['items'][1:]: #skip first "All channels" genre
-    #     channels = api.live_channels(_filter=genre['data'])['liveChannel']
-    #     for channel in channels:
-    #         genres[channel['channelCode']] = genre['title']
-
-    # entitlements = _get_entitlements()
-
     with io.open(output, 'w', encoding='utf-8') as f:
         f.write(u'#EXTM3U\n')
 
-        # for elem in sorted(data['liveChannel'], key=lambda e: e['order']):
-        #     elem['locked'] = entitlements and elem['channelCode'] not in entitlements
-
-        #     if elem['locked'] and settings.getBool('hide_locked'):
-        #         continue
-
-        #     label = elem['title']
-        #     if elem['locked']:
-        #         label = _(_.LOCKED, label=label)
-
-        #     f.write(u'#EXTINF:-1 tvg-id="{id}" tvg-chno="{channel}" channel-id="{channel}" group-title="{group}" tvg-name="{name}" tvg-logo="{logo}",{name}\n{path}\n'.format(
-        #         id=elem['channelCode'], channel=elem['channelId'], logo=_image('{id}:{site_id}:CHANNEL:IMAGE'.format(id=elem['id'], site_id=LIVE_SITEID)), 
-        #         name=label, group=genres.get(elem['channelCode'], ''), path=plugin.url_for(play, media_type=TYPE_LIVE, id=elem['id'], _is_live=True)))
+        for row in _get_channels():
+            f.write(u'#EXTINF:-1 tvg-id="{id}" tvg-chno="{channel}" tvg-name="{name}" tvg-logo="{logo}",{name}\n{path}\n'.format(
+                        id=row['channel'], channel=row['channel'], logo=row['image'], name=row['label'], path=row['path']))
 
 @plugin.route()
 @plugin.merge()
 def epg(output, **kwargs):
-    # channel_codes = []
-    # entitlements = _get_entitlements()
-
-    # for elem in api.live_channels()['liveChannel']:
-    #     if entitlements and elem['channelCode'] not in entitlements and settings.getBool('hide_locked'):
-    #         continue
-    #     else:
-    #         channel_codes.append(elem['channelCode'])
-
-    # added = []
-    # now = arrow.utcnow().shift(hours=-2)
+    now      = arrow.utcnow()
 
     with io.open(output, 'w', encoding='utf-8') as f:
         f.write(u'<?xml version="1.0" encoding="utf-8" ?><tv>')
+        
+        ids = []
+        for row in _get_channels():
+            if not row['channel']:
+                continue
 
-        # for i in range(EPG_DAYS):
-        #     for row in api.epg(channel_codes, starttime=now.shift(days=i)):
-        #         channel = row['SourceChannel']
-        #         events  = row['ChannelSchedule']['EventList']
+            f.write(u'<channel id="{}"><display-name>{}</display-name><icon src="{}"/></channel>'.format(row['channel'], escape(row['label']), escape(row['image'])))
+            ids.append(row['channel'])
 
-        #         if channel['ChannelTag'] not in added:
-        #             f.write(u'<channel id="{}"><display-name>{}</display-name></channel>'.format(channel['ChannelTag'], escape(channel['ChannelName'])))
-        #             added.append(channel['ChannelTag'])
+        for i in range(EPG_DAYS):
+            for row in api.epg(ids, start=now.shift(days=i)):
+                genre = row.get('genres', '')
+                if genre:
+                    genre = genre[0]
 
-        #         for event in events:
-        #             if event.get('SeriesNumber') and event.get('EpisodeNumber'):
-        #                 ep_num = '<episode-num system="onscreen">S{}E{}</episode-num>'.format(event['SeriesNumber'], event['EpisodeNumber'])
-        #             else:
-        #                 ep_num = ''
-
-        #             f.write(u'<programme channel="{}" start="{}" stop="{}"><title>{}</title><desc>{}</desc><category>{}</category><sub-title>{}</sub-title>{}</programme>'.format(
-        #                 channel['ChannelTag'], arrow.get(event['StartTimeUTC']).format('YYYYMMDDHHmmss Z'), arrow.get(event['EndTimeUTC']).format('YYYYMMDDHHmmss Z'), escape(event['EventTitle']),
-        #                 escape(event.get('MergedShortSynopsis', event['ShortSynopsis'])), escape(event['Genre']), escape(event['EpisodeTitle']), ep_num))
+                f.write(u'<programme channel="{}" start="{}" stop="{}"><title>{}</title><desc>{}</desc><category>{}</category></programme>'.format(
+                    row['channel'], arrow.get(row['start']).format('YYYYMMDDHHmmss Z'), arrow.get(row['end']).format('YYYYMMDDHHmmss Z'), escape(row['title']),
+                    escape(row.get('synopsis', '')), escape(genre)))
 
         f.write(u'</tv>')
