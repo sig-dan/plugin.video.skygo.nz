@@ -11,7 +11,7 @@ from matthuisman.exceptions import Error
 from matthuisman.constants import ADDON_ID
 
 from .api import API
-from .constants import IMAGE_URL, HEADERS, EPG_DAYS
+from .constants import IMAGE_URL, HEADERS
 from .language import _
 
 api = API()
@@ -297,8 +297,8 @@ def playlist(output, **kwargs):
 
 @plugin.route()
 @plugin.merge()
-def epg(output, **kwargs):
-    now      = arrow.utcnow()
+def epg(output, days, **kwargs):
+    now = arrow.utcnow()
 
     with io.open(output, 'w', encoding='utf-8') as f:
         f.write(u'<?xml version="1.0" encoding="utf-8" ?><tv>')
@@ -311,7 +311,7 @@ def epg(output, **kwargs):
             f.write(u'<channel id="{}"><display-name>{}</display-name><icon src="{}"/></channel>'.format(row['channel'], escape(row['label']), escape(row['image'])))
             ids.append(row['channel'])
 
-        for i in range(EPG_DAYS):
+        for i in range(days):
             for row in api.epg(ids, start=now.shift(days=i)):
                 genre = row.get('genres', '')
                 if genre:

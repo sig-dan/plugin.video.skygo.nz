@@ -80,6 +80,8 @@ class BaseLanguage(object):
     IA_QUALITY_SET              = 32047
     IA_QUALITY_540P             = 32048
     NO_AUTOPLAY_FOUND           = 32049
+    CONFIRM_MIGRATE             = 32050
+    MIGRATE_OK                  = 32051
 
     def __getattribute__(self, name):
         attr = object.__getattribute__(self, name)

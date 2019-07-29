@@ -41,7 +41,7 @@ class Model(peewee.Model):
     def get_checksum(cls):
         ctx = db.get_sql_context()
         query = cls._schema._create_table()
-        return hash_6([cls.checksum, ctx.sql(query).query()])
+        return hash_6([cls.checksum, ctx.sql(query).query(), cls._meta.indexes])
 
     @classmethod
     def delete_where(cls, *args, **kwargs):

@@ -18,5 +18,3 @@ PLAY_CHANNEL_URL  = 'https://link.theplatform.com/s/7tMqSC/media/{id}?feed=SkyGo
 SUBSCRIPTIONS_URL = 'https://z4a6uom8wa.execute-api.ap-southeast-2.amazonaws.com/prod/v2/onlineSubscriptions/?profileId={}'
 EPG_URL = 'https://www.sky.co.nz/search-service/rest/events'
 WIDEVINE_URL = 'https://widevine.entitlement.theplatform.com/wv/web/ModularDrm/getWidevineLicense?schema=1.0&token={token}&form=json&account=http://access.auth.theplatform.com/data/Account/2682481291&_releasePid={pid}&_widevineChallenge={challenge}'
-
-EPG_DAYS = 7
