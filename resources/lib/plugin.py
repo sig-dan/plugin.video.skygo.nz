@@ -311,7 +311,7 @@ def epg(output, days, **kwargs):
             f.write(u'<channel id="{}"><display-name>{}</display-name><icon src="{}"/></channel>'.format(row['channel'], escape(row['label']), escape(row['image'])))
             ids.append(row['channel'])
 
-        for i in range(days):
+        for i in range(int(days)):
             for row in api.epg(ids, start=now.shift(days=i)):
                 genre = row.get('genres', '')
                 if genre:
