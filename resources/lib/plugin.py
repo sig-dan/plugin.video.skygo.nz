@@ -33,6 +33,7 @@ def home(**kwargs):
         folder.add_item(label=_(_.MOVIES, _bold=True),   path=plugin.url_for(content, label=_.MOVIES, section='movies'))
         folder.add_item(label=_(_.SPORTS, _bold=True),   path=plugin.url_for(content, label=_.SPORTS, section='sport'))
         folder.add_item(label=_(_.BOX_SETS, _bold=True), path=plugin.url_for(content, label=_.BOX_SETS, section='boxsets'))
+        folder.add_item(label=_(_.CHANNELS, _bold=True), path=plugin.url_for(channels))
         folder.add_item(label=_(_.SEARCH, _bold=True),   path=plugin.url_for(search))
 
         folder.add_item(label=_.LOGOUT, path=plugin.url_for(logout))
@@ -41,30 +42,35 @@ def home(**kwargs):
 
     return folder
 
+def _is_subscribed(subscriptions, categories):
+    if not subscriptions or not categories:
+        return True
+
+    for row in categories:
+        if row['media$scheme'] == 'urn:sky:subscription' and row['media$name'] not in subscriptions:
+            return False
+
+    return True
+
+def _get_image(row):
+    images = row.get('media$thumbnails')
+
+    if not images:
+        images = row.get('media$content')
+
+    if not images:
+        return None
+
+    for row in images:
+        if 'SkyGoChannelLogoScroll' in row['plfile$assetTypes'] or 'SkyGOChannelLogo' in row['plfile$assetTypes']:
+            return row['plfile$streamingUrl']
+
+    return images[-1]['plfile$streamingUrl']
+
 def _get_channels():
     subscriptions = userdata.get('subscriptions', [])
     channels = []
     rows = api.channels()
-
-    def _is_subscribed(categories):
-        if not subscriptions or not categories:
-            return True
-
-        for row in categories:
-            if row['media$scheme'] == 'urn:sky:subscription' and row['media$name'] not in subscriptions:
-                return False
-
-        return True
-
-    def _get_image(images):
-        if not images:
-            return None
-
-        for row in images:
-            if 'SkyGoChannelLogoScroll' in row['plfile$assetTypes']:
-                return row['plfile$streamingUrl']
-
-        return images[-1]['plfile$streamingUrl']
 
     def _get_play_url(content):
         for row in content:
@@ -81,7 +87,7 @@ def _get_channels():
 
         label = row['title']
 
-        subscribed = _is_subscribed(row.get('media$categories'))
+        subscribed = _is_subscribed(subscriptions, row.get('media$categories'))
         play_url   = _get_play_url(row.get('media$content'))
 
         if not subscribed:
@@ -96,7 +102,7 @@ def _get_channels():
             'label': label,
             'channel': row.get('sky$skyGOChannelID', ''),
             'description': row.get('description'),
-            'image': _get_image(row.get('media$thumbnails')),
+            'image': _get_image(row),
             'path':  plugin.url_for(play_channel, id=channel_id, _is_live=True),
         })
 
@@ -118,14 +124,40 @@ def live_tv(**kwargs):
     return folder
 
 @plugin.route()
-def content(label, section, sortby=None, title=None, start=0, **kwargs):
+def channels(**kwargs):
+    folder = plugin.Folder(title=_.CHANNELS)
+
+    subscriptions = userdata.get('subscriptions', [])
+
+    for row in sorted(api.channels(), key=lambda row: row['title']):
+        label = row['title']
+
+        subscribed = _is_subscribed(subscriptions, row.get('media$categories'))
+
+        if not subscribed:
+            label = _(_.LOCKED, label=label)
+
+        if settings.getBool('hide_unplayable', False) and not subscribed:
+            continue
+
+        folder.add_item(
+            label    = label,
+            info     = {'description': row.get('description')},
+            art      = {'thumb': _get_image(row)},
+            path     = plugin.url_for(content, label=row['title'], sortby='TITLE', title='', channels=row.get('sky$skyGOChannelID', '')),
+        )
+
+    return folder
+
+@plugin.route()
+def content(label, section='', sortby=None, title=None, channels='', start=0, **kwargs):
     start = int(start)
     folder = plugin.Folder(title=label)
 
     if not sortby:
         items = [[_.A_Z, 'TITLE'], [_.LATEST, 'LATEST'], [_.LAST_CHANCE, 'LASTCHANCE']]
         for item in items:
-            folder.add_item(label=item[0], path=plugin.url_for(content, label=item[0], section=section, sortby=item[1]))
+            folder.add_item(label=item[0], path=plugin.url_for(content, label=item[0], section=section, sortby=item[1], channels=channels))
 
     elif sortby == 'TITLE' and title == None:
         items = [[c, c] for c in ascii_uppercase]
@@ -133,17 +165,17 @@ def content(label, section, sortby=None, title=None, start=0, **kwargs):
         items.append([_.ZERO_9, '0-9'])
         
         for item in items:
-            folder.add_item(label=item[0], path=plugin.url_for(content, label=item[0], section=section, sortby=sortby, title=item[1]))
+            folder.add_item(label=item[0], path=plugin.url_for(content, label=item[0], section=section, sortby=sortby, title=item[1], channels=channels))
 
     else:
-        data   = api.content(section, sortby=sortby, title=title, start=start)
+        data   = api.content(section, sortby=sortby, title=title, channels=channels, start=start)
         items = _process_content(data['data'])
         folder.add_items(items)
 
-        if data['index'] < data['available']:
+        if items and data['index'] < data['available']:
             folder.add_item(
                 label = _(_.NEXT_PAGE, _bold=True),
-                path  = plugin.url_for(content, label=label, section=section, sortby=sortby, title=title, start=data['index']),
+                path  = plugin.url_for(content, label=label, section=section, sortby=sortby, title=title, channels=channels, start=data['index']),
             )
 
     return folder
@@ -165,7 +197,7 @@ def search(query=None, start=0, **kwargs):
     items = _process_content(data['data'])
     folder.add_items(items)
 
-    if data['index'] < data['available']:
+    if items and data['index'] < data['available']:
         folder.add_item(
             label = _(_.NEXT_PAGE, _bold=True),
             path  = plugin.url_for(search, query=query, start=data['index']),

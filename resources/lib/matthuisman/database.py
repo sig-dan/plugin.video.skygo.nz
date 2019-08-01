@@ -1,4 +1,5 @@
 import os
+import json
 
 try:
     import cPickle as pickle
@@ -33,6 +34,15 @@ class PickledField(peewee.BlobField):
     def python_value(self, value):
         if value != None:
             return super(PickledField, self).python_value(pickle.loads(str(value)))
+
+class JSONField(peewee.TextField):
+    def db_value(self, value):
+        if value is not None:
+            return json.dumps(value)
+
+    def python_value(self, value):
+        if value is not None:
+            return json.loads(value)
 
 class Model(peewee.Model):
     checksum = ''

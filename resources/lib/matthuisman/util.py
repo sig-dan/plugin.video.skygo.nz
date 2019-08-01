@@ -6,7 +6,7 @@ import shutil
 import xbmc, xbmcaddon
 
 from .language import _
-from .constants import ADDON_ID, ADDON_NAME, ADDON_PROFILE, DEFAULT_EPG_DAYS
+from .constants import ADDON_ID, ADDON_NAME, ADDON_PROFILE
 from .log import log
 from .exceptions import Error 
 from . import gui

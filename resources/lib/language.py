@@ -25,5 +25,6 @@ class Language(BaseLanguage):
     NEXT_PAGE              = 30021
     ALL                    = 30022
     ZERO_9                 = 30023
+    CHANNELS               = 30024
 
 _ = Language()

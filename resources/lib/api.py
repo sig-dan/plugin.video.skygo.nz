@@ -31,7 +31,7 @@ class API(object):
     def series(self, id):
         return self._session.get(CONTENT_URL + id).json()
 
-    def content(self, section='', sortby='TITLE', text='', title=None, start=0):
+    def content(self, section='', sortby='TITLE', text='', title=None, channels='', start=0):
         params = {
             'title': title or '',
             'genre': '',
@@ -40,6 +40,7 @@ class API(object):
             'sortBy': sortby,
             'lastChance': 'true' if sortby == 'LASTCHANCE' else 'false',
             'type': '',
+            'channel': channels,
             'section': section,
             'size': 100,
             'start': start,
