@@ -207,7 +207,7 @@ class Item(gui.Item):
         if handle > 0:
             xbmcplugin.setResolvedUrl(handle, True, li)
         else:
-            xbmc.Player().play(li.getPath(), li)
+            xbmc.Player().play(self.path, li)
 
 #Plugin.Folder()
 class Folder(object):
@@ -237,7 +237,7 @@ class Folder(object):
             item.art['fanart'] = item.art.get('fanart') or self.fanart
 
             li = item.get_li()
-            xbmcplugin.addDirectoryItem(handle, li.getPath(), li, item.is_folder)
+            xbmcplugin.addDirectoryItem(handle, item.path, li, item.is_folder)
 
         if self.content: xbmcplugin.setContent(handle, self.content)
         if self.title: xbmcplugin.setPluginCategory(handle, self.title)

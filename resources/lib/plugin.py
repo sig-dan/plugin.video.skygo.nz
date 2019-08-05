@@ -1,4 +1,3 @@
-import io
 from string import ascii_uppercase
 
 from xml.sax.saxutils import escape
@@ -320,27 +319,27 @@ def play_channel(id, **kwargs):
 @plugin.route()
 @plugin.merge()
 def playlist(output, **kwargs):
-    with io.open(output, 'w', encoding='utf-8') as f:
-        f.write(u'#EXTM3U\n')
+    with open(output, 'wb') as f:
+        f.write('#EXTM3U\n')
 
         for row in _get_channels():
-            f.write(u'#EXTINF:-1 tvg-id="{id}" tvg-chno="{channel}" tvg-name="{name}" tvg-logo="{logo}",{name}\n{path}\n'.format(
-                        id=row['channel'], channel=row['channel'], logo=row['image'], name=row['label'], path=row['path']))
+            f.write('#EXTINF:-1 tvg-id="{id}" tvg-chno="{channel}" tvg-name="{name}" tvg-logo="{logo}",{name}\n{path}\n'.format(
+                        id=row['channel'], channel=row['channel'], name=row['label'].encode('utf8'), logo=row['image'], path=row['path']))
 
 @plugin.route()
 @plugin.merge()
 def epg(output, days, **kwargs):
     now = arrow.utcnow()
 
-    with io.open(output, 'w', encoding='utf-8') as f:
-        f.write(u'<?xml version="1.0" encoding="utf-8" ?><tv>')
+    with open(output, 'wb') as f:
+        f.write('<?xml version="1.0" encoding="utf-8" ?><tv>')
         
         ids = []
         for row in _get_channels():
             if not row['channel']:
                 continue
 
-            f.write(u'<channel id="{}"><display-name>{}</display-name><icon src="{}"/></channel>'.format(row['channel'], escape(row['label']), escape(row['image'])))
+            f.write('<channel id="{}"><display-name>{}</display-name><icon src="{}"/></channel>'.format(row['channel'], escape(row['label']).encode('utf8'), escape(row['image'])))
             ids.append(row['channel'])
 
         for i in range(int(days)):
@@ -349,8 +348,8 @@ def epg(output, days, **kwargs):
                 if genre:
                     genre = genre[0]
 
-                f.write(u'<programme channel="{}" start="{}" stop="{}"><title>{}</title><desc>{}</desc><category>{}</category></programme>'.format(
-                    row['channel'], arrow.get(row['start']).format('YYYYMMDDHHmmss Z'), arrow.get(row['end']).format('YYYYMMDDHHmmss Z'), escape(row['title']),
-                    escape(row.get('synopsis', '')), escape(genre)))
+                f.write('<programme channel="{}" start="{}" stop="{}"><title>{}</title><desc>{}</desc><category>{}</category></programme>'.format(
+                    row['channel'], arrow.get(row['start']).format('YYYYMMDDHHmmss Z'), arrow.get(row['end']).format('YYYYMMDDHHmmss Z'), escape(row['title']).encode('utf8'),
+                    escape(row.get('synopsis', '')).encode('utf8'), escape(genre).encode('utf8')))
 
-        f.write(u'</tv>')
+        f.write('</tv>')

@@ -82,6 +82,7 @@ class BaseLanguage(object):
     NO_AUTOPLAY_FOUND           = 32049
     CONFIRM_MIGRATE             = 32050
     MIGRATE_OK                  = 32051
+    NO_ERROR_MSG                = 32052
 
     def __getattribute__(self, name):
         attr = object.__getattribute__(self, name)

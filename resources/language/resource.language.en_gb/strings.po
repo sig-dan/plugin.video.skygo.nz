@@ -342,3 +342,7 @@ msgctxt "#32051"
 msgid "Add-on has been migrated\n"
 "Remember to uninstall this old version '{old_addon_id}'"
 msgstr ""
+
+msgctxt "#32052"
+msgid "Unknown Error"
+msgstr ""
